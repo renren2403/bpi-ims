@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -78,22 +79,42 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+        $role = $request->input('role');
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'operating_unit_id' => ['required', 'exists:operating_units,id'],
             'role' => ['required', 'exists:roles,name'],
+            'operating_unit_id' => [
+                in_array($role, ['higher-up']) ? 'nullable' : 'required',
+                'nullable',
+                'exists:operating_units,id',
+            ],
             'justification' => ['nullable', 'string', 'max:500'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ]);
+
+        $pmo = OperatingUnit::where('code', 'PMO')->first();
+
+        // Assign operating unit according to role responsibility:
+        // - higher-up (Executive Directorate): Null (encompasses all operating units bureau-wide)
+        // - evaluator (PMO Evaluator): Defaults to Planning and Management Office (PMO)
+        // - encoder / ou-head: Assigned to their selected Operating Unit
+        if ($role === 'higher-up') {
+            $operatingUnitId = null;
+        } elseif ($role === 'evaluator') {
+            $operatingUnitId = !empty($validated['operating_unit_id']) ? $validated['operating_unit_id'] : $pmo?->id;
+        } else {
+            $operatingUnitId = $validated['operating_unit_id'] ?? null;
+        }
 
         $user = User::create([
             'name' => $validated['name'],
             'designation' => $validated['designation'] ?? null,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'operating_unit_id' => $validated['operating_unit_id'],
+            'operating_unit_id' => $operatingUnitId,
             'is_active' => false, // Inactive until approved
             'approval_status' => 'pending',
             'approval_remarks' => !empty($validated['justification']) ? 'Justification: ' . $validated['justification'] : null,

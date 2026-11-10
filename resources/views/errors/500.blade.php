@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>500 - Server Error</title>
+    <link rel="icon" type="image/png" href="https://buplant.da.gov.ph/wp-content/uploads/2024/03/DA-BPI-312313.png">
+    <link rel="shortcut icon" type="image/png" href="https://buplant.da.gov.ph/wp-content/uploads/2024/03/DA-BPI-312313.png">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 flex items-center justify-center min-h-screen p-4 text-center">

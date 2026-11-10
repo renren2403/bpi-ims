@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\OperatingUnit;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
@@ -47,7 +48,14 @@ class UserController extends Controller
         $users = $query->paginate(15)->withQueryString();
         $operatingUnits = OperatingUnit::where('is_active', true)->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
-        $pendingCount = User::where('approval_status', 'pending')->count();
+        $pendingCount = 0;
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'approval_status')) {
+                $pendingCount = User::where('approval_status', 'pending')->count();
+            }
+        } catch (\Throwable $e) {
+            $pendingCount = 0;
+        }
 
         return view('admin.users.index', compact('users', 'operatingUnits', 'roles', 'pendingCount'));
     }
@@ -65,18 +73,28 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', Password::defaults()],
             'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
             'role' => ['required', 'exists:roles,name'],
             'is_active' => ['boolean'],
         ]);
+
+        $role = $validated['role'];
+        $pmo = OperatingUnit::where('code', 'PMO')->first();
+        if (in_array($role, ['higher-up', 'superadmin'])) {
+            $ouId = null;
+        } elseif (in_array($role, ['admin', 'evaluator']) && empty($validated['operating_unit_id'])) {
+            $ouId = $pmo?->id;
+        } else {
+            $ouId = $validated['operating_unit_id'] ?? null;
+        }
 
         $user = User::create([
             'name' => $validated['name'],
             'designation' => $validated['designation'] ?? null,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'operating_unit_id' => $validated['operating_unit_id'] ?? null,
+            'operating_unit_id' => $ouId,
             'is_active' => $request->boolean('is_active', true),
             'approval_status' => 'approved',
         ]);
@@ -106,11 +124,21 @@ class UserController extends Controller
             'approval_status' => ['required', 'in:pending,approved,rejected'],
         ]);
 
+        $role = $validated['role'];
+        $pmo = OperatingUnit::where('code', 'PMO')->first();
+        if (in_array($role, ['higher-up', 'superadmin'])) {
+            $ouId = null;
+        } elseif (in_array($role, ['admin', 'evaluator']) && empty($validated['operating_unit_id'])) {
+            $ouId = $pmo?->id;
+        } else {
+            $ouId = $validated['operating_unit_id'] ?? null;
+        }
+
         $user->update([
             'name' => $validated['name'],
             'designation' => $validated['designation'] ?? null,
             'email' => $validated['email'],
-            'operating_unit_id' => $validated['operating_unit_id'] ?? null,
+            'operating_unit_id' => $ouId,
             'is_active' => $request->boolean('is_active'),
             'approval_status' => $validated['approval_status'],
         ]);
@@ -162,7 +190,7 @@ class UserController extends Controller
     public function resetPassword(Request $request, User $user)
     {
         $validated = $request->validate([
-            'new_password' => ['required', 'string', 'min:8'],
+            'new_password' => ['required', 'string', Password::defaults()],
         ]);
 
         $user->update([
