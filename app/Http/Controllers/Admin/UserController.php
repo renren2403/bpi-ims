@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\OperatingUnit;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -21,7 +22,7 @@ class UserController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -50,7 +51,7 @@ class UserController extends Controller
         $roles = Role::orderBy('name')->get();
         $pendingCount = 0;
         try {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'approval_status')) {
+            if (Schema::hasColumn('users', 'approval_status')) {
                 $pendingCount = User::where('approval_status', 'pending')->count();
             }
         } catch (\Throwable $e) {
@@ -64,6 +65,7 @@ class UserController extends Controller
     {
         $operatingUnits = OperatingUnit::where('is_active', true)->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
+
         return view('admin.users.create', compact('operatingUnits', 'roles'));
     }
 
@@ -109,6 +111,7 @@ class UserController extends Controller
         $operatingUnits = OperatingUnit::where('is_active', true)->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
         $user->load('roles');
+
         return view('admin.users.edit', compact('user', 'operatingUnits', 'roles'));
     }
 
@@ -158,6 +161,7 @@ class UserController extends Controller
         $user->save();
 
         $state = $user->is_active ? 'activated' : 'deactivated';
+
         return back()->with('status', "User {$user->name} has been {$state}.");
     }
 
@@ -166,7 +170,7 @@ class UserController extends Controller
         $user->update([
             'approval_status' => 'approved',
             'is_active' => true,
-            'approval_remarks' => $request->input('remarks', 'Approved by PMO Administrator on ' . now()->toFormattedDateString()),
+            'approval_remarks' => $request->input('remarks', 'Approved by PMO Administrator on '.now()->toFormattedDateString()),
         ]);
 
         return back()->with('status', "Account request for {$user->name} has been approved and activated.");
@@ -181,7 +185,7 @@ class UserController extends Controller
         $user->update([
             'approval_status' => 'rejected',
             'is_active' => false,
-            'approval_remarks' => $request->input('remarks', 'Declined by PMO Administrator on ' . now()->toFormattedDateString()),
+            'approval_remarks' => $request->input('remarks', 'Declined by PMO Administrator on '.now()->toFormattedDateString()),
         ]);
 
         return back()->with('status', "Account request for {$user->name} has been declined.");

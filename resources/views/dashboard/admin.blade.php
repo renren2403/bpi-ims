@@ -155,11 +155,23 @@
                         <p class="text-xs text-slate-400 mt-0.5">Physical delivery rate versus approved annual BED-2 target milestones.</p>
                     </div>
 
-                    <!-- Category Pills Anchored Top-Right of Card -->
-                    <div class="flex items-center gap-1.5 text-xs">
-                        <button class="px-2.5 py-1 rounded-xl font-bold bg-slate-900 text-white">All ({{ \App\Models\OperatingUnit::count() ?: 12 }})</button>
-                        <button class="px-2.5 py-1 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">On-Track (9)</button>
-                        <button class="px-2.5 py-1 rounded-xl font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition">Lagging (3)</button>
+                    <!-- Actions & Category Pills Anchored Top-Right of Card -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <button class="px-2.5 py-1 rounded-xl font-bold bg-slate-900 text-white">All ({{ \App\Models\OperatingUnit::count() ?: 12 }})</button>
+                            <button class="px-2.5 py-1 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">On-Track (9)</button>
+                            <button class="px-2.5 py-1 rounded-xl font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition">Lagging (3)</button>
+                        </div>
+                        <div class="hidden sm:block w-px h-5 bg-slate-200"></div>
+                        <div class="flex items-center gap-1.5">
+                            <a href="{{ route('admin.operating-units.create') }}" class="px-2.5 py-1 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white text-xs shadow-sm shadow-emerald-600/20 transition flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                <span>Add Unit</span>
+                            </a>
+                            <a href="{{ route('admin.operating-units.index') }}" class="px-2.5 py-1 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs transition">
+                                Manage &rarr;
+                            </a>
+                        </div>
                     </div>
                 </div>
 

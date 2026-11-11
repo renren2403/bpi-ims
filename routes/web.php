@@ -1,10 +1,15 @@
 <?php
-use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\Admin\OperatingUnitController;
+use App\Http\Controllers\Admin\ReportingPeriodController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ReportingPeriodController;
+use App\Models\OperatingUnit;
+use App\Models\ReportingPeriod;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
 Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
@@ -20,8 +25,19 @@ Route::get('/', function () {
     } catch (\Throwable $e) {
         $currentReportingPeriod = null;
     }
-    return view('landing', compact('currentReportingPeriod'));
+    $operatingUnits = collect();
+    try {
+        $operatingUnits = \App\Models\OperatingUnit::where('is_active', true)->orderBy('name')->get();
+        if ($operatingUnits->isEmpty()) {
+            $operatingUnits = \App\Models\OperatingUnit::orderBy('name')->get();
+        }
+    } catch (\Throwable $e) {
+        $operatingUnits = collect();
+    }
+    $operatingUnitsCount = $operatingUnits->count();
+    return view('landing', compact('currentReportingPeriod', 'operatingUnits', 'operatingUnitsCount'));
 })->name('landing');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
@@ -32,7 +48,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     // Central Role-Based Dashboard Redirector
-    Route::get('/dashboard', function () {return app(AuthController::class)->redirectUserByRole(Auth::user());})->name('dashboard');
+    Route::get('/dashboard', function () {
+        return app(AuthController::class)->redirectUserByRole(Auth::user());
+    })->name('dashboard');
     // User Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
@@ -49,17 +67,23 @@ Route::middleware('auth')->group(function () {
         // Reporting Periods & Cycle Rules Module
         Route::resource('reporting-periods', ReportingPeriodController::class);
         Route::patch('reporting-periods/{reportingPeriod}/toggle-active', [ReportingPeriodController::class, 'toggleActive'])->name('reporting-periods.toggle-active');
-    });
+        Route::resource('operating-units',OperatingUnitController::class)->except(['show']);
+        Route::patch('operating-units/{operatingUnit}/toggle-status',[OperatingUnitController::class,'toggleStatus'])->name('operating-units.toggle-status');    
+        });
     // 2. EVALUATOR (PMO) Routes
     Route::middleware(['role:evaluator'])->prefix('evaluator')->name('evaluator.')->group(function () {
-    Route::get('/dashboard', fn () => view('dashboard.evaluator'))->name('dashboard');});
+        Route::get('/dashboard', fn () => view('dashboard.evaluator'))->name('dashboard');
+    });
     // 3. OU HEAD / DIVISION CHIEF Routes
     Route::middleware(['role:ou-head'])->prefix('head')->name('head.')->group(function () {
-    Route::get('/dashboard', fn () => view('dashboard.head'))->name('dashboard');});
+        Route::get('/dashboard', fn () => view('dashboard.head'))->name('dashboard');
+    });
     // 4. ENCODER Routes
     Route::middleware(['role:encoder'])->prefix('encoder')->name('encoder.')->group(function () {
-    Route::get('/dashboard', fn () => view('dashboard.encoder'))->name('dashboard');});
+        Route::get('/dashboard', fn () => view('dashboard.encoder'))->name('dashboard');
+    });
     // 5. HIGHER-UP / EXECUTIVE Routes
     Route::middleware(['role:higher-up'])->prefix('executive')->name('executive.')->group(function () {
-    Route::get('/dashboard', fn () => view('dashboard.executive'))->name('dashboard');});
+        Route::get('/dashboard', fn () => view('dashboard.executive'))->name('dashboard');
+    });
 });

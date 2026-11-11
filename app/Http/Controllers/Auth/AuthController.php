@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Validation\Rules\Password;
+use App\Models\OperatingUnit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
-use App\Models\OperatingUnit;
+use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
@@ -18,6 +18,7 @@ class AuthController extends Controller
         if (Auth::check()) {
             return $this->redirectUserByRole(Auth::user());
         }
+
         return view('auth.login');
     }
 
@@ -56,6 +57,7 @@ class AuthController extends Controller
         $remember = $request->boolean('remember');
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
+
             return $this->redirectUserByRole(Auth::user());
         }
 
@@ -104,7 +106,7 @@ class AuthController extends Controller
         if ($role === 'higher-up') {
             $operatingUnitId = null;
         } elseif ($role === 'evaluator') {
-            $operatingUnitId = !empty($validated['operating_unit_id']) ? $validated['operating_unit_id'] : $pmo?->id;
+            $operatingUnitId = ! empty($validated['operating_unit_id']) ? $validated['operating_unit_id'] : $pmo?->id;
         } else {
             $operatingUnitId = $validated['operating_unit_id'] ?? null;
         }
@@ -117,7 +119,7 @@ class AuthController extends Controller
             'operating_unit_id' => $operatingUnitId,
             'is_active' => false, // Inactive until approved
             'approval_status' => 'pending',
-            'approval_remarks' => !empty($validated['justification']) ? 'Justification: ' . $validated['justification'] : null,
+            'approval_remarks' => ! empty($validated['justification']) ? 'Justification: '.$validated['justification'] : null,
         ]);
 
         $user->assignRole($validated['role']);

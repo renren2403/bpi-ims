@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('reporting_period_id')->constrained('reporting_periods')->cascadeOnDelete();
             $table->year('year');
             $table->unsignedTinyInteger('month');
-            $table->enum('status', ['draft','submitted','head_approved','evaluated','returned'])->default('draft');
+            $table->enum('status', ['draft', 'submitted', 'head_approved', 'evaluated', 'returned'])->default('draft');
             $table->text('remarks')->nullable();
             $table->foreignId('submitted_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('submitted_at')->nullable();
@@ -26,6 +26,7 @@ return new class extends Migration
             $table->unique(['operating_unit_id', 'reporting_period_id']);
         });
     }
+
     public function down(): void
     {
         Schema::dropIfExists('monthly_reports');

@@ -9,23 +9,24 @@ use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
-public function show()
-{
-    $user=Auth::user()->load('operatingUnit','roles');
-    return view('profile.show',compact('user'));
-}
+    public function show()
+    {
+        $user = Auth::user()->load('operatingUnit', 'roles');
 
-public function updatePassword(Request $request)
-{
-    $validated = $request->validate([
-        'current_password' => ['required','current_password'],
-        'password' => ['required','confirmed',Password::defaults()],
-    ]);
+        return view('profile.show', compact('user'));
+    }
 
-    $request->user()->update([
-        'password' => Hash::make($validated['password']),
-    ]);
-    return back()->with('status','Password updated successfully');
-}
+    public function updatePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
 
+        $request->user()->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return back()->with('status', 'Password updated successfully');
+    }
 }

@@ -8,7 +8,6 @@
     <link rel="icon" type="image/png" href="https://buplant.da.gov.ph/wp-content/uploads/2024/03/DA-BPI-312313.png">
     <link rel="shortcut icon" type="image/png"
         href="https://buplant.da.gov.ph/wp-content/uploads/2024/03/DA-BPI-312313.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -46,7 +45,6 @@
 
 <body
     class="bg-[#f8fafc] text-slate-800 flex h-screen overflow-hidden antialiased selection:bg-emerald-500 selection:text-white">
-
     <!-- 1. MODERN SLEEK FLOATING SIDEBAR (Top-Left & Bottom-Left Anchored) -->
     <aside
         class="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 z-20 shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
@@ -65,8 +63,29 @@
                         <span
                             class="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-800 tracking-wider">v2.0</span>
                     </div>
-                    <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Performance
-                        Intelligence</p>
+                    @php
+                        $userRoleTitle = 'SYSTEM';
+                        if (Auth::check()) {
+                            $currentUser = Auth::user();
+                            if ($currentUser->hasAnyRole(['superadmin', 'admin'])) {
+                                $userRoleTitle = 'ADMIN';
+                            } elseif ($currentUser->hasRole('evaluator')) {
+                                $userRoleTitle = 'EVALUATOR';
+                            } elseif ($currentUser->hasRole('ou-head')) {
+                                $userRoleTitle = 'DIVISION CHIEF';
+                            } elseif ($currentUser->hasRole('encoder')) {
+                                $userRoleTitle = 'ENCODER';
+                            } elseif ($currentUser->hasRole('higher-up')) {
+                                $userRoleTitle = 'EXECUTIVE';
+                            } else {
+                                $primaryRole = $currentUser->roles->first()?->name;
+                                $userRoleTitle = $primaryRole ? strtoupper(str_replace(['-', '_'], ' ', $primaryRole)) : 'USER';
+                            }
+                        }
+                    @endphp
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider truncate">
+                        {{ $userRoleTitle }} DASHBOARD
+                    </p>
                 </div>
             </a>
 
@@ -138,6 +157,26 @@
                         <p class="px-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">PMO
                             Governance</p>
                         <nav class="space-y-1">
+                            <!-- Operating Units Link -->
+                            <a href="{{ route('admin.operating-units.index') }}"
+                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.operating-units.*')
+                                    ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.operating-units.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                    <span>Operating Units</span>
+                                </div>
+                                <span
+                                    class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
+                                    {{ \App\Models\OperatingUnit::count() }}
+                                </span>
+                            </a>
+
+                            <!-- User Management Link (Existing) -->
                             <a href="{{ route('admin.users.index') }}"
                                 class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.users.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                                 <div class="flex items-center gap-2.5">

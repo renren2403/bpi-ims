@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ReportingPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Carbon\Carbon;
 
 class ReportingPeriodController extends Controller
 {
