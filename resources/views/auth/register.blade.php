@@ -1,3 +1,4 @@
+<!--register.blade.php auth-->
 <!DOCTYPE html>
 <html lang="en">
 

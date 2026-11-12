@@ -1,10 +1,12 @@
 <?php
 
+// web.php
 use App\Http\Controllers\Admin\OperatingUnitController;
 use App\Http\Controllers\Admin\ReportingPeriodController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UnderConstructionController;
 use App\Models\OperatingUnit;
 use App\Models\ReportingPeriod;
 use Illuminate\Support\Facades\Auth;
@@ -16,25 +18,23 @@ Route::get('/', function () {
     }
     $currentReportingPeriod = null;
     try {
-        $currentReportingPeriod = \App\Models\ReportingPeriod::where('is_active', true)
+        $currentReportingPeriod = ReportingPeriod::where('is_active', true)
             ->orWhere('status', 'open')
             ->orderByDesc('is_active')
             ->orderByDesc('year')
             ->orderByDesc('month')
             ->first();
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $currentReportingPeriod = null;
     }
     $operatingUnits = collect();
     try {
-        $operatingUnits = \App\Models\OperatingUnit::where('is_active', true)->orderBy('name')->get();
-        if ($operatingUnits->isEmpty()) {
-            $operatingUnits = \App\Models\OperatingUnit::orderBy('name')->get();
-        }
-    } catch (\Throwable $e) {
+        $operatingUnits = OperatingUnit::coveredDirectoryUnits();
+    } catch (Throwable $e) {
         $operatingUnits = collect();
     }
     $operatingUnitsCount = $operatingUnits->count();
+
     return view('landing', compact('currentReportingPeriod', 'operatingUnits', 'operatingUnitsCount'));
 })->name('landing');
 
@@ -43,6 +43,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::get('/reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
@@ -54,11 +58,15 @@ Route::middleware('auth')->group(function () {
     // User Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    // Workspace Modules (Under Construction)
+    Route::get('/bed2-plans', [UnderConstructionController::class, 'bed2Plans'])->name('bed2-plans.index');
+    Route::get('/monthly-reports', [UnderConstructionController::class, 'monthlyReports'])->name('monthly-reports.index');
+    Route::get('/unlock-requests', [UnderConstructionController::class, 'unlockRequests'])->name('unlock-requests.index');
     // 1. PMO GOVERNANCE & ADMINISTRATION Routes (Superadmin, Admin, and PMO Evaluators)
     Route::middleware(['role:superadmin|admin|evaluator'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', fn () => view('dashboard.admin'))->name('dashboard');
         // User Management Module
-        Route::resource('users', UserController::class)->except(['show', 'destroy']);
+        Route::resource('users', UserController::class)->except(['show']);
         Route::patch('users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
         Route::post('users/{user}/approve', [UserController::class, 'approve'])->name('users.approve');
         Route::post('users/{user}/reject', [UserController::class, 'reject'])->name('users.reject');
@@ -67,9 +75,10 @@ Route::middleware('auth')->group(function () {
         // Reporting Periods & Cycle Rules Module
         Route::resource('reporting-periods', ReportingPeriodController::class);
         Route::patch('reporting-periods/{reportingPeriod}/toggle-active', [ReportingPeriodController::class, 'toggleActive'])->name('reporting-periods.toggle-active');
-        Route::resource('operating-units',OperatingUnitController::class)->except(['show']);
-        Route::patch('operating-units/{operatingUnit}/toggle-status',[OperatingUnitController::class,'toggleStatus'])->name('operating-units.toggle-status');    
-        });
+        Route::resource('operating-units', OperatingUnitController::class)->except(['show']);
+        Route::patch('operating-units/{operatingUnit}/toggle-status', [OperatingUnitController::class, 'toggleStatus'])->name('operating-units.toggle-status');
+        Route::get('/audit-logs', [UnderConstructionController::class, 'auditLogs'])->name('audit-logs.index');
+    });
     // 2. EVALUATOR (PMO) Routes
     Route::middleware(['role:evaluator'])->prefix('evaluator')->name('evaluator.')->group(function () {
         Route::get('/dashboard', fn () => view('dashboard.evaluator'))->name('dashboard');

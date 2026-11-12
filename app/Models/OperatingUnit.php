@@ -1,11 +1,28 @@
 <?php
 
+// OperatingUnit.php
+
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 class OperatingUnit extends Model
 {
+    /**
+     * Standardized operating unit classification types.
+     *
+     * @var list<string>
+     */
+    public const TYPES = [
+        'Division',
+        'Center',
+        'Office',
+    ];
+
     protected $fillable = [
         'name',
         'code',
@@ -19,6 +36,49 @@ class OperatingUnit extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    protected function code(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?string => $value !== null ? mb_strtoupper($value) : null,
+            set: fn (?string $value): ?string => $value !== null ? mb_strtoupper(trim($value)) : null,
+        );
+    }
+
+    /**
+     * Exclude evaluating/oversight PMO units from covered reporting operating units.
+     */
+    #[Scope]
+    protected function coveredForReporting(Builder $query): void
+    {
+        $query->where(function (Builder $subQuery): void {
+            $subQuery->whereNull('code')
+                ->orWhereRaw('UPPER(code) != ?', ['PMO']);
+        });
+    }
+
+    /**
+     * Retrieve covered reporting units for public directory display, excluding PMO.
+     *
+     * @return Collection<int, static>
+     */
+    public static function coveredDirectoryUnits(): Collection
+    {
+        $units = static::query()
+            ->coveredForReporting()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        if ($units->isEmpty()) {
+            return static::query()
+                ->coveredForReporting()
+                ->orderBy('name')
+                ->get();
+        }
+
+        return $units;
+    }
 
     public function divisionChief()
     {

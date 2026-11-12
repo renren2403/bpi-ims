@@ -1,10 +1,8 @@
 <?php
-
+//OperatingUnitSeeder.php
 namespace Database\Seeders;
-
 use App\Models\OperatingUnit;
 use Illuminate\Database\Seeder;
-
 class OperatingUnitSeeder extends Seeder
 {
     public function run(): void

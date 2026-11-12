@@ -1,3 +1,4 @@
+<!--landing.blade.php profile-->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -17,6 +18,7 @@
                         dagreen: {
                             50: '#f0fdf4',
                             100: '#dcfce7',
+                            200: '#bbf7d0',
                             700: '#15803d',
                             800: '#166534',
                             900: '#14532d',
@@ -66,10 +68,7 @@
         $operatingUnits = $operatingUnits ?? null;
         if ($operatingUnits === null) {
             try {
-                $operatingUnits = \App\Models\OperatingUnit::where('is_active', true)->orderBy('name')->get();
-                if ($operatingUnits->isEmpty()) {
-                    $operatingUnits = \App\Models\OperatingUnit::orderBy('name')->get();
-                }
+                $operatingUnits = \App\Models\OperatingUnit::coveredDirectoryUnits();
             } catch (\Throwable $e) {
                 $operatingUnits = collect();
             }
@@ -84,7 +83,8 @@
             : null;
     @endphp
     <!-- 1. OFFICIAL TOP BAR (FULL WIDTH) -->
-    <div class="bg-[#0b1f3a] text-slate-300 text-[11px] px-6 lg:px-12 xl:px-16 py-2 border-b-2 border-amber-500 w-full">
+    <div
+        class="bg-dagreen-950 text-emerald-100/90 text-[11px] px-6 lg:px-12 xl:px-16 py-2 border-b-2 border-amber-500 w-full">
         <div class="w-full flex flex-col md:flex-row justify-between items-center gap-2">
             <div class="flex items-center gap-2.5">
 
@@ -93,22 +93,22 @@
                         class="w-5 h-5 object-contain shrink-0">
                     <span>Bureau of Plant Industry</span>
                 </span>
-                <span class="text-slate-600">&bull;</span>
-                <span class="text-emerald-400 font-bold flex items-center gap-1.5">
+                <span class="text-dagreen-700">&bull;</span>
+                <span class="text-emerald-300 font-bold flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     Integrated Performance Monitoring System
                 </span>
             </div>
             <div class="flex items-center gap-4 text-slate-300">
                 <span class="hidden sm:inline">Planning & Management Office (PMO)</span>
-                <span class="hidden sm:inline text-slate-600">&bull;</span>
-                <span class="text-slate-400">Philippine Standard Time:</span>
+                <span class="hidden sm:inline text-dagreen-700">&bull;</span>
+                <span class="text-emerald-200/75">Philippine Standard Time:</span>
                 <span id="pst-time" class="font-bold text-amber-400 tracking-wide">PST Manila</span>
             </div>
         </div>
     </div>
     <!-- 2. OFFICIAL AGENCY MASTHEAD (FULL WIDTH) -->
-    <header class="bg-white border-b border-slate-300 shadow-sm w-full">
+    <header class="bg-white border-b-2 border-dagreen-800/20 shadow-sm w-full">
         <div class="w-full px-6 lg:px-12 xl:px-16 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <!-- Agency Title and Crests -->
             <div class="flex items-center gap-4">
@@ -118,10 +118,11 @@
                     <img src="https://buplant.da.gov.ph/wp-content/uploads/2024/03/DA-BPI-312313.png"
                         alt="Bureau of Plant Industry Official Seal" class="w-full h-full object-contain">
                 </div>
-                <div class="border-l border-slate-200 pl-4 space-y-0.5">
+                <div class="border-l border-dagreen-200 pl-4 space-y-0.5">
                     <p class="text-[11px] uppercase tracking-widest text-slate-500 font-bold">Republic of the
                         Philippines</p>
-                    <p class="text-xs uppercase tracking-wider text-slate-700 font-extrabold">Department of Agriculture
+                    <p class="text-xs uppercase tracking-wider text-dagreen-800 font-extrabold">Department of
+                        Agriculture
                     </p>
                     <h1 class="text-xl sm:text-2xl font-black text-dagreen-950 tracking-tight leading-tight">
                         BUREAU OF PLANT INDUSTRY
@@ -203,7 +204,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                 <!-- Left: Mandate, System Purpose & Regulatory Framework (8 cols on lg, 9 cols on 2xl) -->
                 <div
-                    class="lg:col-span-8 2xl:col-span-9 bg-white rounded-xl border border-slate-300 p-7 lg:p-9 shadow-sm flex flex-col justify-between space-y-6">
+                    class="lg:col-span-8 2xl:col-span-9 bg-white rounded-xl border border-slate-300 border-t-4 border-t-dagreen-800 p-7 lg:p-9 shadow-sm flex flex-col justify-between space-y-6">
                     <div class="space-y-4">
                         <div class="flex flex-wrap items-center gap-2.5">
                             <span
@@ -216,7 +217,7 @@
                             <span class="text-slate-500 text-xs font-semibold">Text Placeholder</span>
                         </div>
                         <h2
-                            class="text-2xl sm:text-3xl xl:text-4xl font-black text-slate-900 tracking-tight leading-snug">
+                            class="text-2xl sm:text-3xl xl:text-4xl font-black text-dagreen-950 tracking-tight leading-snug">
                             Bureau of Plant Industry Monthly Physical Performance Monitoring System
                         </h2>
                         <p class="text-sm xl:text-base text-slate-600 leading-relaxed font-normal">
@@ -326,9 +327,9 @@
             </div>
             <!-- 5. SECTION PLACEHOLDER -->
             <div>
-                <div class="border-b-2 border-slate-300 pb-2.5 mb-5 flex items-center justify-between">
+                <div class="border-b-2 border-dagreen-800/20 pb-2.5 mb-5 flex items-center justify-between">
                     <div>
-                        <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Section
+                        <span class="text-xs font-black text-dagreen-800 uppercase tracking-widest">Section
                             Placeholder</span>
                         <h3 class="text-lg font-extrabold text-slate-900 mt-0.5">Section Title Placeholder</h3>
                     </div>
@@ -414,7 +415,8 @@
                 </div>
             </div>
             <!-- 6. OPERATING DIVISIONS COVERAGE DIRECTORY -->
-            <div class="bg-white p-6 lg:p-7 rounded-xl border border-slate-200 shadow-sm space-y-5">
+            <div
+                class="bg-white p-6 lg:p-7 rounded-xl border border-slate-200 border-t-4 border-t-dagreen-700 shadow-sm space-y-5">
                 <div
                     class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3.5 gap-2">
                     <div>
@@ -423,22 +425,16 @@
                             <h4 class="font-extrabold text-sm text-slate-900 uppercase tracking-wider">Covered Bureau
                                 Operating Units & National Centers</h4>
                         </div>
-                        <p class="text-xs text-slate-500 mt-1">Central office technical divisions and national
-                            seed/quarantine research networks reporting under BPI-IPMS.</p>
+                        <p class="text-xs text-slate-500 mt-1">Operating units reporting under BPI-IPMS.</p>
                     </div>
                     <span
-                        class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 shrink-0 self-start sm:self-auto">
+                        class="px-3 py-1 rounded-full bg-dagreen-50 text-dagreen-800 font-bold text-xs border border-dagreen-200 shrink-0 self-start sm:self-auto">
                         {{ $operatingUnitsCount }} Units Active
                     </span>
                 </div>
 
                 @php
-                    $nationalCenters = $operatingUnits->filter(function ($u) {
-                        return strcasecmp($u->type ?? '', 'Center') === 0 ||
-                            stripos($u->code, 'CRDC') !== false ||
-                            stripos($u->name, 'Center') !== false;
-                    });
-                    $centralUnits = $operatingUnits->reject(function ($u) {
+                    [$nationalCenters, $centralUnits] = $operatingUnits->partition(function ($u) {
                         return strcasecmp($u->type ?? '', 'Center') === 0 ||
                             stripos($u->code, 'CRDC') !== false ||
                             stripos($u->name, 'Center') !== false;
@@ -458,7 +454,7 @@
                                     {{ $centralUnits->count() }}
                                 </span>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                 @foreach ($centralUnits as $unit)
                                     <div
                                         class="group p-3.5 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 hover:border-dagreen-700 hover:shadow-sm transition-all duration-150 flex flex-col justify-between space-y-2">
@@ -552,7 +548,7 @@
                                             {{ $unit->code }}
                                         </span>
                                         <span
-                                            class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded {{ $unit->type === 'Center' || str_contains($unit->code, 'CRDC') ? 'bg-amber-100 text-amber-800 border border-amber-200' : ($unit->type === 'Office' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-white text-slate-500 border border-slate-200') }}">
+                                            class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded {{ strcasecmp($unit->type ?? '', 'Center') === 0 || str_contains($unit->code, 'CRDC') ? 'bg-amber-100 text-amber-800 border border-amber-200' : (strcasecmp($unit->type ?? '', 'Office') === 0 ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-white text-slate-500 border border-slate-200') }}">
                                             {{ $unit->type ?? 'Division' }}
                                         </span>
                                     </div>
@@ -586,7 +582,7 @@
         </div>
     </main>
     <!-- 7. OFFICIAL STANDARD GOVPH FOOTER (FULL WIDTH) -->
-    <footer class="bg-[#0b1f3a] text-slate-300 text-xs mt-10 border-t-4 border-dagreen-800 w-full">
+    <footer class="bg-dagreen-950 text-slate-300 text-xs mt-10 border-t-4 border-dagreen-700 w-full">
         <div class="w-full px-6 lg:px-12 xl:px-16 py-10 grid grid-cols-1 md:grid-cols-4 gap-8 xl:gap-12">
             <!-- Column 1: Republic Seal & Agency Mandate -->
             <div class="space-y-4">
@@ -605,21 +601,21 @@
                                 Republic of the Philippines
                             </p>
                         </div>
-                        <p class="text-[10px] text-slate-400 leading-tight">
+                        <p class="text-[10px] text-emerald-200/70 leading-tight">
                             All content is in the public domain unless otherwise stated.
                         </p>
                     </div>
                 </div>
 
                 <!-- Agency Portal Description -->
-                <p class="text-[11px] text-slate-400 leading-relaxed border-t border-slate-700/60 pt-3">
+                <p class="text-[11px] text-emerald-200/70 leading-relaxed border-t border-dagreen-800/80 pt-3">
                     Official portal of the Bureau of Plant Industry, Department of Agriculture for physical
                     accountability reporting, BED-2 execution, and MOV verification.
                 </p>
             </div>
             <!-- Column 2: Government Links -->
             <div class="space-y-2">
-                <p class="font-black text-white uppercase tracking-wider text-xs border-b border-slate-700 pb-1.5">
+                <p class="font-black text-white uppercase tracking-wider text-xs border-b border-dagreen-800 pb-1.5">
                     Government Links</p>
                 <ul class="space-y-1.5 text-[11px] text-slate-300">
                     <li><a href="https://da.gov.ph" target="_blank" class="hover:text-amber-400 transition">&bull;
@@ -635,40 +631,40 @@
             </div>
             <!-- Column 3: Bureau Office Directory -->
             <div class="space-y-2">
-                <p class="font-black text-white uppercase tracking-wider text-xs border-b border-slate-700 pb-1.5">
+                <p class="font-black text-white uppercase tracking-wider text-xs border-b border-dagreen-800 pb-1.5">
                     Bureau of Plant Industry</p>
                 <div class="text-[11px] text-slate-300 space-y-1 leading-relaxed">
                     <p class="font-bold text-white">Central Office:</p>
                     <p>692 San Andres Street, Malate, Manila, 1004 Metro Manila, Philippines</p>
-                    <p><span class="text-slate-400">PMO Inquiries:</span> (02) 67-67676</p>
-                    <p><span class="text-slate-400">Email:</span> pmo@bpi.gov.ph</p>
+                    <p><span class="text-emerald-200/70">PMO Inquiries:</span> (02) 67-67676</p>
+                    <p><span class="text-emerald-200/70">Email:</span> pmo@bpi.gov.ph</p>
                 </div>
             </div>
             <!-- Column 4: Compliance & FOI -->
             <div class="space-y-2">
-                <p class="font-black text-white uppercase tracking-wider text-xs border-b border-slate-700 pb-1.5">
+                <p class="font-black text-white uppercase tracking-wider text-xs border-b border-dagreen-800 pb-1.5">
                     System Governance</p>
                 <div class="space-y-2 text-[11px] text-slate-300">
                     <div class="flex items-center gap-2">
                         <span
-                            class="w-6 h-6 rounded bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-bold text-amber-400">🛡️</span>
+                            class="w-6 h-6 rounded bg-dagreen-900 border border-dagreen-800 flex items-center justify-center text-xs font-bold text-amber-400">🛡️</span>
                         <span>Data Privacy Act of 2012 (RA 10173)</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span
-                            class="w-6 h-6 rounded bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-bold text-amber-400">⚖️</span>
+                            class="w-6 h-6 rounded bg-dagreen-900 border border-dagreen-800 flex items-center justify-center text-xs font-bold text-amber-400">⚖️</span>
                         <span>DBM Budget Execution Guidelines</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span
-                            class="w-6 h-6 rounded bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-bold text-amber-400">📋</span>
+                            class="w-6 h-6 rounded bg-dagreen-900 border border-dagreen-800 flex items-center justify-center text-xs font-bold text-amber-400">📋</span>
                         <span>Freedom of Information (FOI)</span>
                     </div>
                 </div>
             </div>
         </div>
         <div
-            class="bg-[#071527] py-3.5 px-6 lg:px-12 xl:px-16 text-center text-[10px] text-slate-400 border-t border-slate-800 w-full">
+            class="bg-[#031d0e] py-3.5 px-6 lg:px-12 xl:px-16 text-center text-[10px] text-emerald-200/70 border-t border-dagreen-900 w-full">
             <p>&copy; {{ date('Y') }} Bureau of Plant Industry &bull; Department of Agriculture. All Rights
                 Reserved.</p>
         </div>

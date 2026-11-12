@@ -38,16 +38,21 @@ class LandingPageTest extends TestCase
 
         $response = $this->get('/');
 
-        $response->assertStatus(200);
-        $response->assertViewHas('operatingUnitsCount', 2);
-        $response->assertSee('2<span', false);
-        $response->assertSee('CPMD');
-        $response->assertSee('PMO');
-        $response->assertDontSee('DUMMY');
+        $response->assertOk()
+            ->assertViewHas('operatingUnitsCount', 1)
+            ->assertSee('1<span', false)
+            ->assertSee('CPMD')
+            ->assertDontSee('Planning and Management Office')
+            ->assertDontSee('DUMMY');
+
+        $this->assertDatabaseHas('operating_units', [
+            'code' => 'PMO',
+            'is_active' => true,
+        ]);
     }
 
     /**
-     * Test categorized operating units directory with national centers.
+     * Test categorized operating units directory with national centers excludes PMO.
      */
     public function test_landing_page_renders_categorized_units_when_centers_present(): void
     {
@@ -55,6 +60,13 @@ class LandingPageTest extends TestCase
             'name' => 'Crop Pest Management Division',
             'code' => 'CPMD',
             'type' => 'Division',
+            'is_active' => true,
+        ]);
+
+        OperatingUnit::create([
+            'name' => 'Planning and Management Office',
+            'code' => 'PMO',
+            'type' => 'Office',
             'is_active' => true,
         ]);
 
@@ -67,10 +79,37 @@ class LandingPageTest extends TestCase
 
         $response = $this->get('/');
 
-        $response->assertStatus(200);
-        $response->assertSee('Office Technical Divisions');
-        $response->assertSee('National Crop Research');
-        $response->assertSee('BNCRDC');
-        $response->assertSee('CPMD');
+        $response->assertOk()
+            ->assertViewHas('operatingUnitsCount', 2)
+            ->assertSee('Office Technical Divisions')
+            ->assertSee('National Crop Research')
+            ->assertSee('BNCRDC')
+            ->assertSee('CPMD')
+            ->assertDontSee('xl:grid-cols-3', false)
+            ->assertDontSee('Planning and Management Office');
+    }
+
+    public function test_landing_page_still_excludes_pmo_when_no_covered_units_are_active(): void
+    {
+        OperatingUnit::create([
+            'name' => 'Planning and Management Office',
+            'code' => 'PMO',
+            'type' => 'Office',
+            'is_active' => true,
+        ]);
+
+        OperatingUnit::create([
+            'name' => 'Crop Pest Management Division',
+            'code' => 'CPMD',
+            'type' => 'Division',
+            'is_active' => false,
+        ]);
+
+        $response = $this->get('/');
+
+        $response->assertOk()
+            ->assertViewHas('operatingUnitsCount', 1)
+            ->assertSee('CPMD')
+            ->assertDontSee('Planning and Management Office');
     }
 }

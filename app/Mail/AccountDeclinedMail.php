@@ -1,0 +1,44 @@
+<?php
+namespace App\Mail;
+use App\Models\User;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+class AccountDeclinedMail extends Mailable
+{   
+    use Queueable, SerializesModels;
+        public function __construct(public User $user)
+    {
+        $this->user->loadMissing(['operatingUnit', 'roles']);
+    }
+    public function envelope(): Envelope
+    {
+        return new Envelope(
+            subject: 'BPI-IPMS Account Request Declined',
+        );
+    }
+    public function content(): Content
+    {
+        return new Content(
+            markdown: 'mail.account-declined',
+            with: [
+                'roleLabel' => $this->user->roleLabel(),
+                'unitLabel' => $this->user->operatingUnitLabel(),
+                'portalUrl' => route('landing'),
+            ],
+        );
+    }
+    /**
+     * Get the attachments for the message.
+     *
+     * @return array<int, Attachment>
+     */
+    public function attachments(): array
+    {
+        return [];
+    }
+}

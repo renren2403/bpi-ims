@@ -1,5 +1,5 @@
 <?php
-
+//Bed2Plan.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

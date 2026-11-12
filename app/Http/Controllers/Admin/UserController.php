@@ -1,23 +1,31 @@
 <?php
 
+// UserController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountApprovedMail;
+use App\Mail\AccountDeclinedMail;
+use App\Mail\AdminPasswordResetMail;
 use App\Models\OperatingUnit;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
         $query = User::with(['operatingUnit', 'roles'])->latest();
-
         // Search by name or email
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -54,7 +62,7 @@ class UserController extends Controller
             if (Schema::hasColumn('users', 'approval_status')) {
                 $pendingCount = User::where('approval_status', 'pending')->count();
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $pendingCount = 0;
         }
 
@@ -167,11 +175,17 @@ class UserController extends Controller
 
     public function approve(Request $request, User $user)
     {
+        $wasApproved = $user->isApproved();
+
         $user->update([
             'approval_status' => 'approved',
             'is_active' => true,
             'approval_remarks' => $request->input('remarks', 'Approved by PMO Administrator on '.now()->toFormattedDateString()),
         ]);
+
+        if (! $wasApproved) {
+            $this->sendDecisionEmail($user, new AccountApprovedMail($user));
+        }
 
         return back()->with('status', "Account request for {$user->name} has been approved and activated.");
     }
@@ -181,14 +195,29 @@ class UserController extends Controller
         if ($user->id === Auth::id()) {
             return back()->with('error', 'You cannot reject your own account.');
         }
-
+        $wasRejected = $user->isRejected();
         $user->update([
             'approval_status' => 'rejected',
             'is_active' => false,
             'approval_remarks' => $request->input('remarks', 'Declined by PMO Administrator on '.now()->toFormattedDateString()),
         ]);
+        if (! $wasRejected) {
+            $this->sendDecisionEmail($user, new AccountDeclinedMail($user));
+        }
 
         return back()->with('status', "Account request for {$user->name} has been declined.");
+    }
+
+    private function sendDecisionEmail(User $user, Mailable $mailable): void
+    {
+        if (empty($user->email)) {
+            return;
+        }
+        try {
+            Mail::to($user->email)->send($mailable);
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     public function resetPassword(Request $request, User $user)
@@ -201,6 +230,28 @@ class UserController extends Controller
             'password' => Hash::make($validated['new_password']),
         ]);
 
+        $this->sendDecisionEmail($user, new AdminPasswordResetMail($user));
+
         return back()->with('status', "Password for {$user->name} has been reset.");
+    }
+
+    /**
+     * Permanently delete a user account while safeguarding admin hierarchy and active superadmins.
+     */
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($reason = $user->deletionDenialReason(Auth::user())) {
+            return redirect()->route('admin.users.index')->with('error', $reason);
+        }
+
+        if ($user->hasRole('superadmin') && User::role('superadmin')->count() <= 1) {
+            return redirect()->route('admin.users.index')->with('error', 'Cannot delete the last remaining Superadmin account.');
+        }
+
+        $name = $user->name;
+        $user->syncRoles([]);
+        $user->delete();
+
+        return redirect()->route('admin.users.index')->with('status', "User {$name} has been deleted.");
     }
 }
