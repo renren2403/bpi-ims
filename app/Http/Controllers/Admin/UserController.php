@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\AccountApprovedMail;
 use App\Mail\AccountDeclinedMail;
 use App\Mail\AdminPasswordResetMail;
+use App\Models\AuditLog;
 use App\Models\OperatingUnit;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -82,6 +83,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
+            'phone_number' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', Password::defaults()],
             'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
@@ -102,6 +104,7 @@ class UserController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'designation' => $validated['designation'] ?? null,
+            'phone_number' => $validated['phone_number'] ?? null,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'operating_unit_id' => $ouId,
@@ -110,6 +113,22 @@ class UserController extends Controller
         ]);
 
         $user->assignRole($validated['role']);
+
+        try {
+            AuditLog::record(
+                action: 'user.created',
+                auditable: $user,
+                newValues: [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $validated['role'],
+                    'operating_unit_id' => $ouId,
+                ],
+                request: $request
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
 
         return redirect()->route('admin.users.index')->with('status', 'User created successfully!');
     }
@@ -128,12 +147,24 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
+            'phone_number' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
             'role' => ['required', 'exists:roles,name'],
             'is_active' => ['boolean'],
             'approval_status' => ['required', 'in:pending,approved,rejected'],
         ]);
+
+        $oldValues = [
+            'name' => $user->name,
+            'designation' => $user->designation,
+            'phone_number' => $user->phone_number,
+            'email' => $user->email,
+            'operating_unit_id' => $user->operating_unit_id,
+            'role' => $user->roles->first()?->name,
+            'is_active' => $user->is_active,
+            'approval_status' => $user->approval_status,
+        ];
 
         $role = $validated['role'];
         $pmo = OperatingUnit::where('code', 'PMO')->first();
@@ -148,6 +179,7 @@ class UserController extends Controller
         $user->update([
             'name' => $validated['name'],
             'designation' => $validated['designation'] ?? null,
+            'phone_number' => $validated['phone_number'] ?? null,
             'email' => $validated['email'],
             'operating_unit_id' => $ouId,
             'is_active' => $request->boolean('is_active'),
@@ -156,7 +188,102 @@ class UserController extends Controller
 
         $user->syncRoles([$validated['role']]);
 
+        try {
+            AuditLog::record(
+                action: 'user.updated',
+                auditable: $user,
+                oldValues: $oldValues,
+                newValues: [
+                    'name' => $user->name,
+                    'designation' => $user->designation,
+                    'phone_number' => $user->phone_number,
+                    'email' => $user->email,
+                    'operating_unit_id' => $ouId,
+                    'role' => $role,
+                    'is_active' => $user->is_active,
+                    'approval_status' => $user->approval_status,
+                ],
+                request: $request
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         return redirect()->route('admin.users.index')->with('status', 'User updated successfully!');
+    }
+
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'user_ids' => ['required', 'array', 'min:1'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+            'remarks' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $users = User::whereIn('id', $validated['user_ids'])->get();
+        $action = $validated['action'];
+        $count = 0;
+
+        foreach ($users as $user) {
+            if ($action === 'approve') {
+                $wasApproved = $user->isApproved();
+                $user->update([
+                    'approval_status' => 'approved',
+                    'is_active' => true,
+                    'approval_remarks' => $validated['remarks'] ?? 'Bulk approved by PMO Administrator on '.now()->toFormattedDateString(),
+                ]);
+
+                if (! $wasApproved) {
+                    $this->sendDecisionEmail($user, new AccountApprovedMail($user));
+                }
+
+                try {
+                    AuditLog::record(
+                        action: 'user.approved',
+                        auditable: $user,
+                        newValues: ['approval_status' => 'approved', 'is_active' => true],
+                        request: $request
+                    );
+                } catch (Throwable $e) {
+                    report($e);
+                }
+
+                $count++;
+            } elseif ($action === 'reject') {
+                if ($user->id === Auth::id() || $user->hasRole('superadmin')) {
+                    continue;
+                }
+
+                $wasRejected = $user->isRejected();
+                $user->update([
+                    'approval_status' => 'rejected',
+                    'is_active' => false,
+                    'approval_remarks' => $validated['remarks'] ?? 'Bulk declined by PMO Administrator on '.now()->toFormattedDateString(),
+                ]);
+
+                if (! $wasRejected) {
+                    $this->sendDecisionEmail($user, new AccountDeclinedMail($user));
+                }
+
+                try {
+                    AuditLog::record(
+                        action: 'user.declined',
+                        auditable: $user,
+                        newValues: ['approval_status' => 'rejected', 'is_active' => false],
+                        request: $request
+                    );
+                } catch (Throwable $e) {
+                    report($e);
+                }
+
+                $count++;
+            }
+        }
+
+        $actionVerb = $action === 'approve' ? 'approved and activated' : 'declined';
+
+        return back()->with('status', "{$count} account request(s) successfully {$actionVerb}.");
     }
 
     public function toggleStatus(User $user)
@@ -169,6 +296,17 @@ class UserController extends Controller
         $user->save();
 
         $state = $user->is_active ? 'activated' : 'deactivated';
+
+        try {
+            AuditLog::record(
+                action: 'user.status_toggled',
+                auditable: $user,
+                newValues: ['is_active' => $user->is_active],
+                request: request()
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
 
         return back()->with('status', "User {$user->name} has been {$state}.");
     }
@@ -187,6 +325,17 @@ class UserController extends Controller
             $this->sendDecisionEmail($user, new AccountApprovedMail($user));
         }
 
+        try {
+            AuditLog::record(
+                action: 'user.approved',
+                auditable: $user,
+                newValues: ['approval_status' => 'approved', 'is_active' => true],
+                request: $request
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         return back()->with('status', "Account request for {$user->name} has been approved and activated.");
     }
 
@@ -203,6 +352,17 @@ class UserController extends Controller
         ]);
         if (! $wasRejected) {
             $this->sendDecisionEmail($user, new AccountDeclinedMail($user));
+        }
+
+        try {
+            AuditLog::record(
+                action: 'user.declined',
+                auditable: $user,
+                newValues: ['approval_status' => 'rejected', 'is_active' => false],
+                request: $request
+            );
+        } catch (Throwable $e) {
+            report($e);
         }
 
         return back()->with('status', "Account request for {$user->name} has been declined.");
@@ -232,6 +392,16 @@ class UserController extends Controller
 
         $this->sendDecisionEmail($user, new AdminPasswordResetMail($user));
 
+        try {
+            AuditLog::record(
+                action: 'user.password_reset_by_admin',
+                auditable: $user,
+                request: $request
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         return back()->with('status', "Password for {$user->name} has been reset.");
     }
 
@@ -246,6 +416,22 @@ class UserController extends Controller
 
         if ($user->hasRole('superadmin') && User::role('superadmin')->count() <= 1) {
             return redirect()->route('admin.users.index')->with('error', 'Cannot delete the last remaining Superadmin account.');
+        }
+
+        try {
+            AuditLog::record(
+                action: 'user.deleted',
+                auditable: $user,
+                oldValues: [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->roles->first()?->name,
+                    'operating_unit_id' => $user->operating_unit_id,
+                ],
+                request: request()
+            );
+        } catch (Throwable $e) {
+            report($e);
         }
 
         $name = $user->name;

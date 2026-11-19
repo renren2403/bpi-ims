@@ -1,10 +1,14 @@
 <?php
 
 // web.php
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\OperatingUnitController;
+use App\Http\Controllers\Admin\PAPController;
+use App\Http\Controllers\Admin\PerformanceIndicatorController;
 use App\Http\Controllers\Admin\ReportingPeriodController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Bed2PlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnderConstructionController;
 use App\Models\OperatingUnit;
@@ -57,15 +61,23 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
     // User Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
-    // Workspace Modules (Under Construction)
-    Route::get('/bed2-plans', [UnderConstructionController::class, 'bed2Plans'])->name('bed2-plans.index');
+    // BED-2 Target Plans Module
+    Route::post('/bed2-plans/{bed2Plan}/submit-head', [Bed2PlanController::class, 'submitToHead'])->name('bed2-plans.submit-head');
+    Route::post('/bed2-plans/{bed2Plan}/head-approve', [Bed2PlanController::class, 'headApprove'])->name('bed2-plans.head-approve');
+    Route::post('/bed2-plans/{bed2Plan}/return', [Bed2PlanController::class, 'returnPlan'])->name('bed2-plans.return');
+    Route::post('/bed2-plans/{bed2Plan}/pmo-approve', [Bed2PlanController::class, 'pmoApprove'])->name('bed2-plans.pmo-approve');
+    Route::resource('bed2-plans', Bed2PlanController::class)->parameters(['bed2-plans' => 'bed2Plan']);
+    Route::post('/api/quick-pap', [PAPController::class, 'quickStore'])->name('paps.quick-store');
+    Route::post('/api/quick-indicator', [PerformanceIndicatorController::class, 'quickStore'])->name('indicators.quick-store');
     Route::get('/monthly-reports', [UnderConstructionController::class, 'monthlyReports'])->name('monthly-reports.index');
     Route::get('/unlock-requests', [UnderConstructionController::class, 'unlockRequests'])->name('unlock-requests.index');
     // 1. PMO GOVERNANCE & ADMINISTRATION Routes (Superadmin, Admin, and PMO Evaluators)
     Route::middleware(['role:superadmin|admin|evaluator'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', fn () => view('dashboard.admin'))->name('dashboard');
         // User Management Module
+        Route::post('users/bulk', [UserController::class, 'bulkAction'])->name('users.bulk');
         Route::resource('users', UserController::class)->except(['show']);
         Route::patch('users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
         Route::post('users/{user}/approve', [UserController::class, 'approve'])->name('users.approve');
@@ -77,7 +89,16 @@ Route::middleware('auth')->group(function () {
         Route::patch('reporting-periods/{reportingPeriod}/toggle-active', [ReportingPeriodController::class, 'toggleActive'])->name('reporting-periods.toggle-active');
         Route::resource('operating-units', OperatingUnitController::class)->except(['show']);
         Route::patch('operating-units/{operatingUnit}/toggle-status', [OperatingUnitController::class, 'toggleStatus'])->name('operating-units.toggle-status');
-        Route::get('/audit-logs', [UnderConstructionController::class, 'auditLogs'])->name('audit-logs.index');
+
+        // Programs / PAPs & Indicators Module
+        Route::resource('paps', PAPController::class)->except(['show']);
+        Route::patch('paps/{pap}/toggle-status', [PAPController::class, 'toggleStatus'])->name('paps.toggle-status');
+        Route::post('paps/{pap}/indicators', [PerformanceIndicatorController::class, 'store'])->name('paps.indicators.store');
+        Route::put('indicators/{indicator}', [PerformanceIndicatorController::class, 'update'])->name('indicators.update');
+        Route::patch('indicators/{indicator}/toggle-status', [PerformanceIndicatorController::class, 'toggleStatus'])->name('indicators.toggle-status');
+        Route::delete('indicators/{indicator}', [PerformanceIndicatorController::class, 'destroy'])->name('indicators.destroy');
+
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });
     // 2. EVALUATOR (PMO) Routes
     Route::middleware(['role:evaluator'])->prefix('evaluator')->name('evaluator.')->group(function () {

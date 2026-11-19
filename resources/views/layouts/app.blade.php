@@ -179,6 +179,22 @@
                                 </span>
                             </a>
 
+                            <!-- Programs / PAPs Management Link -->
+                            <a href="{{ route('admin.paps.index') }}"
+                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.paps.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.paps.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                    </svg>
+                                    <span>Programs &amp; PAPs</span>
+                                </div>
+                                <span class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
+                                    {{ \App\Models\PAP::count() }}
+                                </span>
+                            </a>
+
                             <!-- User Management Link (Existing) -->
                             <a href="{{ route('admin.users.index') }}"
                                 class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.users.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
@@ -275,10 +291,15 @@
         <div class="p-3.5 border-t border-slate-100 bg-slate-50/70">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5 overflow-hidden">
-                    <div
-                        class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-botanic-800 text-white font-extrabold text-xs flex items-center justify-center shadow-sm shrink-0">
-                        {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
-                    </div>
+                    @if (Auth::user()->avatarUrl())
+                        <img src="{{ Auth::user()->avatarUrl() }}" alt="{{ Auth::user()->name }}"
+                            class="w-9 h-9 rounded-xl object-cover shadow-sm shrink-0 border border-emerald-500/20">
+                    @else
+                        <div
+                            class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-botanic-800 text-white font-extrabold text-xs flex items-center justify-center shadow-sm shrink-0">
+                            {{ Auth::user()->initials() }}
+                        </div>
+                    @endif
                     <div class="overflow-hidden">
                         <p class="text-xs font-bold text-slate-900 truncate">{{ Auth::user()->name }}</p>
                         <p class="text-[10px] text-slate-500 font-medium truncate">

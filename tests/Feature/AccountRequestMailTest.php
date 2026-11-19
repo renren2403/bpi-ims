@@ -1,17 +1,22 @@
 <?php
+
 namespace Tests\Feature;
+
 use App\Mail\AccountApprovedMail;
 use App\Mail\AccountDeclinedMail;
 use App\Mail\AccountRequestSubmittedMail;
+use App\Mail\NewAccountRequestAlertMail;
 use App\Models\OperatingUnit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
+
 class AccountRequestMailTest extends TestCase
 {
     use RefreshDatabase;
+
     /**
      * Create a user assigned to the given Spatie role.
      *
@@ -53,7 +58,7 @@ class AccountRequestMailTest extends TestCase
         $pendingUser->refresh();
         $this->assertSame('approved', $pendingUser->approval_status);
         $this->assertTrue($pendingUser->is_active);
-        Mail::assertSent(AccountApprovedMail::class, function (AccountApprovedMail $mail) use ($pendingUser): bool {
+        Mail::assertQueued(AccountApprovedMail::class, function (AccountApprovedMail $mail) use ($pendingUser): bool {
             return $mail->hasTo($pendingUser->email) && $mail->user->is($pendingUser);
         });
         $mailable = new AccountApprovedMail($pendingUser);
@@ -88,7 +93,7 @@ class AccountRequestMailTest extends TestCase
         $this->assertSame('rejected', $pendingUser->approval_status);
         $this->assertFalse($pendingUser->is_active);
 
-        Mail::assertSent(AccountDeclinedMail::class, function (AccountDeclinedMail $mail) use ($pendingUser): bool {
+        Mail::assertQueued(AccountDeclinedMail::class, function (AccountDeclinedMail $mail) use ($pendingUser): bool {
             return $mail->hasTo($pendingUser->email) && $mail->user->is($pendingUser);
         });
 
@@ -104,6 +109,12 @@ class AccountRequestMailTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
         Mail::fake();
 
+        $admin = $this->createUserWithRole('admin', [
+            'name' => 'PMO Administrator',
+            'email' => 'admin@bpi.gov.ph',
+            'is_active' => true,
+            'approval_status' => 'approved',
+        ]);
         $unit = OperatingUnit::create([
             'name' => 'Crop Pest Management Division',
             'code' => 'CPMD',
@@ -127,7 +138,8 @@ class AccountRequestMailTest extends TestCase
         /** @var User $user */
         $user = User::where('email', 'juan@bpi.gov.ph')->firstOrFail();
 
-        Mail::assertSent(AccountRequestSubmittedMail::class, function (AccountRequestSubmittedMail $mail) use ($user): bool {
+        // 1. Verify confirmation email to applicant
+        Mail::assertQueued(AccountRequestSubmittedMail::class, function (AccountRequestSubmittedMail $mail) use ($user): bool {
             return $mail->hasTo($user->email) && $mail->user->is($user);
         });
 
@@ -137,5 +149,121 @@ class AccountRequestMailTest extends TestCase
         $mailable->assertSeeInHtml('OU Encoder');
         $mailable->assertSeeInHtml('Crop Pest Management Division (CPMD)');
         $mailable->assertDontSeeInHtml('<code>', false);
+
+        // 2. Verify alert email to PMO Administrator
+        Mail::assertQueued(NewAccountRequestAlertMail::class, function (NewAccountRequestAlertMail $mail) use ($admin, $user): bool {
+            return $mail->hasTo($admin->email) && $mail->applicant->is($user);
+        });
+
+        $adminMailable = new NewAccountRequestAlertMail($user);
+        $adminMailable->assertHasSubject('[BPI-IPMS Action Required] New Account Request - Juan Dela Cruz');
+        $adminMailable->assertSeeInHtml('Juan Dela Cruz');
+        $adminMailable->assertSeeInHtml('Agriculturist II');
+        $adminMailable->assertSeeInHtml('OU Encoder');
+        $adminMailable->assertSeeInHtml('Crop Pest Management Division (CPMD)');
+        $adminMailable->assertSeeInHtml('Assigned division encoder.');
+        $adminMailable->assertSeeInHtml(route('admin.users.index', ['approval_status' => 'pending']));
+        $adminMailable->assertDontSeeInHtml('<code>', false);
+    }
+
+    public function test_declined_user_can_reapply_for_an_account(): void
+    {
+        $this->seed(RoleAndPermissionSeeder::class);
+        Mail::fake();
+
+        $admin = $this->createUserWithRole('admin', [
+            'name' => 'PMO Administrator',
+            'email' => 'admin@bpi.gov.ph',
+            'is_active' => true,
+            'approval_status' => 'approved',
+        ]);
+
+        $unit = OperatingUnit::create([
+            'name' => 'Crop Pest Management Division',
+            'code' => 'CPMD',
+            'type' => 'Division',
+            'is_active' => true,
+        ]);
+
+        $rejectedUser = $this->createUserWithRole('encoder', [
+            'name' => 'Juan Dela Cruz',
+            'email' => 'juan@bpi.gov.ph',
+            'operating_unit_id' => $unit->id,
+            'is_active' => false,
+            'approval_status' => 'rejected',
+            'approval_remarks' => 'Declined: wrong division.',
+        ]);
+
+        $response = $this->post(route('register'), [
+            'name' => 'Juan Dela Cruz Jr.',
+            'designation' => 'Senior Agriculturist',
+            'email' => 'juan@bpi.gov.ph',
+            'role' => 'ou-head',
+            'operating_unit_id' => $unit->id,
+            'justification' => 'Corrected division assignment.',
+            'password' => 'NewPassword@123!',
+            'password_confirmation' => 'NewPassword@123!',
+        ]);
+
+        $response->assertRedirect(route('login'));
+
+        $rejectedUser->refresh();
+        $this->assertSame('pending', $rejectedUser->approval_status);
+        $this->assertSame('Juan Dela Cruz Jr.', $rejectedUser->name);
+        $this->assertSame('Senior Agriculturist', $rejectedUser->designation);
+        $this->assertTrue($rejectedUser->hasRole('ou-head'));
+
+        Mail::assertQueued(AccountRequestSubmittedMail::class, function (AccountRequestSubmittedMail $mail) use ($rejectedUser): bool {
+            return $mail->hasTo($rejectedUser->email);
+        });
+
+        Mail::assertQueued(NewAccountRequestAlertMail::class, function (NewAccountRequestAlertMail $mail) use ($admin): bool {
+            return $mail->hasTo($admin->email);
+        });
+    }
+
+    public function test_approved_and_pending_users_cannot_re_register(): void
+    {
+        $this->seed(RoleAndPermissionSeeder::class);
+        Mail::fake();
+
+        $unit = OperatingUnit::create([
+            'name' => 'Crop Pest Management Division',
+            'code' => 'CPMD',
+            'type' => 'Division',
+            'is_active' => true,
+        ]);
+
+        $approved = $this->createUserWithRole('encoder', [
+            'email' => 'approved@bpi.gov.ph',
+            'operating_unit_id' => $unit->id,
+            'approval_status' => 'approved',
+        ]);
+
+        $pending = $this->createUserWithRole('encoder', [
+            'email' => 'pending@bpi.gov.ph',
+            'operating_unit_id' => $unit->id,
+            'approval_status' => 'pending',
+        ]);
+
+        $this->post(route('register'), [
+            'name' => 'Test User',
+            'email' => $approved->email,
+            'role' => 'encoder',
+            'operating_unit_id' => $unit->id,
+            'password' => 'Password@123!',
+            'password_confirmation' => 'Password@123!',
+        ])->assertSessionHasErrors('email');
+
+        $this->post(route('register'), [
+            'name' => 'Test User',
+            'email' => $pending->email,
+            'role' => 'encoder',
+            'operating_unit_id' => $unit->id,
+            'password' => 'Password@123!',
+            'password_confirmation' => 'Password@123!',
+        ])->assertSessionHasErrors('email');
+
+        Mail::assertNothingOutgoing();
     }
 }

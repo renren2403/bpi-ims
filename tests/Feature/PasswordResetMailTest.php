@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\AdminPasswordResetMail;
+use App\Mail\PasswordChangedMail;
 use App\Mail\PasswordResetLinkMail;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -47,15 +48,16 @@ class PasswordResetMailTest extends TestCase
             'email' => $user->email,
         ])->assertRedirect();
 
-        $capturedToken = null;
+        /** @var string $capturedToken */
+        $capturedToken = '';
 
-        Mail::assertSent(PasswordResetLinkMail::class, function (PasswordResetLinkMail $mail) use ($user, &$capturedToken): bool {
+        Mail::assertQueued(PasswordResetLinkMail::class, function (PasswordResetLinkMail $mail) use ($user, &$capturedToken): bool {
             $capturedToken = $mail->token;
 
             return $mail->hasTo($user->email) && $mail->user->is($user);
         });
 
-        $this->assertNotNull($capturedToken);
+        $this->assertNotEmpty($capturedToken);
 
         $mailable = new PasswordResetLinkMail($user, $capturedToken);
         $mailable->assertHasSubject('BPI-IPMS Password Reset Request');
@@ -78,6 +80,10 @@ class PasswordResetMailTest extends TestCase
 
         $user->refresh();
         $this->assertTrue(Hash::check('NewSecure@123!', $user->password));
+
+        Mail::assertQueued(PasswordChangedMail::class, function (PasswordChangedMail $mail) use ($user): bool {
+            return $mail->hasTo($user->email) && $mail->user->is($user);
+        });
     }
 
     public function test_pending_rejected_and_deactivated_users_cannot_request_password_reset(): void
@@ -136,7 +142,7 @@ class PasswordResetMailTest extends TestCase
         $target->refresh();
         $this->assertTrue(Hash::check($newPassword, $target->password));
 
-        Mail::assertSent(AdminPasswordResetMail::class, function (AdminPasswordResetMail $mail) use ($target): bool {
+        Mail::assertQueued(AdminPasswordResetMail::class, function (AdminPasswordResetMail $mail) use ($target): bool {
             return $mail->hasTo($target->email) && $mail->user->is($target);
         });
 
@@ -164,5 +170,41 @@ class PasswordResetMailTest extends TestCase
             ->assertForbidden();
 
         Mail::assertNothingSent();
+    }
+
+    public function test_user_updating_profile_password_sends_password_changed_notification(): void
+    {
+        $this->seed(RoleAndPermissionSeeder::class);
+        Mail::fake();
+
+        $user = $this->createUserWithRole('encoder', [
+            'name' => 'Juan Dela Cruz',
+            'email' => 'juan@bpi.gov.ph',
+            'password' => Hash::make('CurrentPassword@123!'),
+            'is_active' => true,
+            'approval_status' => 'approved',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('profile.password'), [
+                'current_password' => 'CurrentPassword@123!',
+                'password' => 'UpdatedPassword@123!',
+                'password_confirmation' => 'UpdatedPassword@123!',
+            ])
+            ->assertRedirect();
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('UpdatedPassword@123!', $user->password));
+
+        Mail::assertQueued(PasswordChangedMail::class, function (PasswordChangedMail $mail) use ($user): bool {
+            return $mail->hasTo($user->email) && $mail->user->is($user);
+        });
+
+        $mailable = new PasswordChangedMail($user, now()->format('F j, Y g:i A'), '127.0.0.1');
+        $mailable->assertHasSubject('[BPI-IPMS Security Notice] Your Password Was Changed');
+        $mailable->assertSeeInHtml('Juan Dela Cruz');
+        $mailable->assertSeeInHtml('juan@bpi.gov.ph');
+        $mailable->assertSeeInHtml(route('password.request'));
+        $mailable->assertDontSeeInHtml('<code>', false);
     }
 }

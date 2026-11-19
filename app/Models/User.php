@@ -19,12 +19,16 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'designation',
+        'phone_number',
+        'avatar',
         'email',
         'password',
         'operating_unit_id',
         'is_active',
         'approval_status',
         'approval_remarks',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     public function isPendingApproval(): bool
@@ -110,6 +114,28 @@ class User extends Authenticatable
         return $this->deletionDenialReason($actor) === null;
     }
 
+    public function avatarUrl(): ?string
+    {
+        if ($this->avatar && file_exists(public_path($this->avatar))) {
+            return asset($this->avatar);
+        }
+
+        return null;
+    }
+
+    public function initials(): string
+    {
+        $words = preg_split('/\s+/', trim($this->name));
+        if (empty($words) || empty($words[0])) {
+            return 'U';
+        }
+        if (count($words) === 1) {
+            return strtoupper(substr($words[0], 0, 2));
+        }
+
+        return strtoupper(substr($words[0], 0, 1).substr(end($words), 0, 1));
+    }
+
     protected $hidden = [
         'password',
         'remember_token',
@@ -121,6 +147,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 

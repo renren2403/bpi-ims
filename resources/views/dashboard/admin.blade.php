@@ -1,7 +1,6 @@
 <!--admin.blade.php dashboard-->
 @extends('layouts.app')
 @section('title', 'Bureau Physical Performance Command Center')
-
 @section('content')
     @php
         $adminActiveCycle = \App\Models\ReportingPeriod::where('is_active', true)->first();
@@ -10,13 +9,11 @@
         $cycleEnd = $adminActiveCycle ? \Illuminate\Support\Carbon::parse($adminActiveCycle->window_end) : null;
     @endphp
     <div class="space-y-5">
-
         <!-- HERO BRIEFING BAR (Content Anchored to All 4 Corners) -->
         <div
             class="bg-gradient-to-r from-slate-900 via-botanic-950 to-slate-900 p-6 rounded-2xl text-white shadow-lg relative overflow-hidden flex flex-col justify-between gap-5">
             <div class="absolute -right-8 -bottom-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none">
             </div>
-
             <!-- Hero Top Row: Left Tag & Right Status Pill -->
             <div class="flex items-center justify-between relative z-10">
                 <div
@@ -48,7 +45,6 @@
                     </a>
                 @endif
             </div>
-
             <!-- Hero Bottom Row: Left Headline & Right Metrics Badges -->
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 relative z-10 pt-1">
                 <div>
@@ -58,7 +54,6 @@
                         Means of Verification for FY {{ date('Y') }}.
                     </p>
                 </div>
-
                 <div class="flex items-center gap-3 shrink-0">
                     <div class="text-right">
                         <p class="text-[10px] uppercase font-bold text-slate-400">Bureau Delivery Health</p>
@@ -73,10 +68,8 @@
                 </div>
             </div>
         </div>
-
         <!-- ROW 1: 4 KPI METRIC TILES (Content Anchored to All 4 Tile Corners) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
             <!-- Tile 1: Delivery Rate -->
             <div
                 class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition flex flex-col justify-between">

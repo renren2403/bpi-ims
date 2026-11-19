@@ -10,9 +10,17 @@
                 <p class="text-xs text-slate-500 mt-0.5">Update user credentials, role allocation, approval state, and access
                     permissions.</p>
             </div>
-            <a href="{{ route('admin.users.index') }}"
-                class="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition">&larr;
-                Back to Directory</a>
+            <div class="flex items-center gap-2.5">
+                @if ($user->last_login_at)
+                    <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Last active {{ $user->last_login_at->diffForHumans() }}
+                    </span>
+                @endif
+                <a href="{{ route('admin.users.index') }}"
+                    class="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition">&larr;
+                    Back to Directory</a>
+            </div>
         </div>
 
         @if ($errors->any())
@@ -33,12 +41,21 @@
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
                 </div>
 
-                <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Designation /
-                        Title</label>
-                    <input type="text" name="designation" value="{{ old('designation', $user->designation) }}"
-                        placeholder="e.g. Senior Agriculturist"
-                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Designation /
+                            Title</label>
+                        <input type="text" name="designation" value="{{ old('designation', $user->designation) }}"
+                            placeholder="e.g. Senior Agriculturist"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Phone / Contact
+                            No.</label>
+                        <input type="text" name="phone_number" value="{{ old('phone_number', $user->phone_number) }}"
+                            placeholder="e.g. +63 917 123 4567"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
+                    </div>
                 </div>
 
                 <div>

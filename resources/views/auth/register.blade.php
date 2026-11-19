@@ -267,12 +267,16 @@
                     </div>
 
                     <div class="pt-2">
-                        <button type="submit"
-                            class="w-full py-3 bg-dagreen-800 hover:bg-dagreen-900 text-white font-extrabold rounded-lg text-xs shadow transition flex items-center justify-center gap-2">
-                            <span>Submit Registration Request for PMO Approval</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="submit" id="submit_btn"
+                            class="w-full py-3 bg-dagreen-800 hover:bg-dagreen-900 text-white font-extrabold rounded-lg text-xs shadow transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <span id="submit_text">Submit Registration Request for PMO Approval</span>
+                            <svg id="submit_icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                            <svg id="submit_spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                             </svg>
                         </button>
                     </div>
@@ -375,14 +379,38 @@
         }
         document.addEventListener('DOMContentLoaded', function() {
             handleRoleChange();
-            // Re-enable disabled select right before submit so evaluator's PMO selection is submitted
+            // Re-enable disabled select right before submit so evaluator's PMO selection is submitted, and prevent double submission
             const form = document.querySelector('form');
             if (form) {
-                form.addEventListener('submit', function() {
+                let isSubmitting = false;
+                form.addEventListener('submit', function(e) {
+                    if (form.checkValidity && !form.checkValidity()) {
+                        return;
+                    }
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    isSubmitting = true;
+
                     const role = document.getElementById('role_select').value;
                     const ouSelect = document.getElementById('ou_select');
                     if (role === 'evaluator') {
                         ouSelect.disabled = false;
+                    }
+
+                    const submitBtn = document.getElementById('submit_btn');
+                    const submitText = document.getElementById('submit_text');
+                    const submitIcon = document.getElementById('submit_icon');
+                    const submitSpinner = document.getElementById('submit_spinner');
+
+                    if (submitBtn) {
+                        setTimeout(() => {
+                            submitBtn.disabled = true;
+                        }, 1);
+                        if (submitText) submitText.textContent = 'Submitting Request for PMO Approval...';
+                        if (submitIcon) submitIcon.classList.add('hidden');
+                        if (submitSpinner) submitSpinner.classList.remove('hidden');
                     }
                 });
             }

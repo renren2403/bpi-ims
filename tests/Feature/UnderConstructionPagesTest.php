@@ -42,7 +42,6 @@ class UnderConstructionPagesTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    #[TestWith(['bed2-plans.index', 'BED-2 Target Plans'])]
     #[TestWith(['monthly-reports.index', 'Monthly Reports'])]
     #[TestWith(['unlock-requests.index', 'Unlock Requests'])]
     public function test_authenticated_workspace_user_can_view_workspace_under_construction_pages(
@@ -76,17 +75,15 @@ class UnderConstructionPagesTest extends TestCase
     #[TestWith(['superadmin'])]
     #[TestWith(['admin'])]
     #[TestWith(['evaluator'])]
-    public function test_governance_roles_can_view_audit_and_security_logs_under_construction_page(string $role): void
+    public function test_governance_roles_can_view_audit_and_security_logs_page(string $role): void
     {
         $user = $this->createUserWithRole($role);
 
         $response = $this->actingAs($user)->get(route('admin.audit-logs.index'));
 
         $response->assertOk()
-            ->assertViewIs('under-construction')
-            ->assertSee('Audit & Security Logs', false)
-            ->assertSee('Under Construction')
-            ->assertSee('This Page Is Under Construction');
+            ->assertViewIs('admin.audit-logs.index')
+            ->assertSee('Audit & Security Activity Logs', false);
     }
 
     public function test_navigation_and_admin_dashboard_render_links_to_under_construction_pages(): void

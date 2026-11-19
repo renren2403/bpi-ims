@@ -6,6 +6,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Mail\AccountRequestSubmittedMail;
+use App\Mail\NewAccountRequestAlertMail;
+use App\Mail\PasswordChangedMail;
+use App\Models\AuditLog;
 use App\Models\OperatingUnit;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
@@ -51,7 +54,29 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
-            return $this->redirectUserByRole(Auth::user());
+            /** @var User $authenticatedUser */
+            $authenticatedUser = Auth::user();
+            $authenticatedUser->update([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ]);
+
+            try {
+                AuditLog::record(
+                    action: 'auth.login',
+                    auditable: $authenticatedUser,
+                    newValues: [
+                        'email' => $authenticatedUser->email,
+                        'ip' => $request->ip(),
+                    ],
+                    request: $request,
+                    userId: $authenticatedUser->id
+                );
+            } catch (Throwable $e) {
+                report($e);
+            }
+
+            return $this->redirectUserByRole($authenticatedUser);
         }
 
         return back()->withErrors([
@@ -79,7 +104,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'role' => ['required', 'exists:roles,name'],
             'operating_unit_id' => [
                 in_array($role, ['higher-up']) ? 'nullable' : 'required',
@@ -89,6 +114,21 @@ class AuthController extends Controller
             'justification' => ['nullable', 'string', 'max:500'],
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ]);
+
+        // Check if an account with this email already exists
+        $existingUser = User::where('email', $validated['email'])->first();
+
+        if ($existingUser) {
+            if ($existingUser->isApproved()) {
+                return back()->withInput($request->except(['password', 'password_confirmation']))
+                    ->withErrors(['email' => 'An approved account with this email address already exists. Please sign in or reset your password.']);
+            }
+
+            if ($existingUser->isPendingApproval()) {
+                return back()->withInput($request->except(['password', 'password_confirmation']))
+                    ->withErrors(['email' => 'An account request for this email address is already pending PMO verification.']);
+            }
+        }
 
         $pmo = OperatingUnit::where('code', 'PMO')->first();
 
@@ -104,34 +144,103 @@ class AuthController extends Controller
             $operatingUnitId = $validated['operating_unit_id'] ?? null;
         }
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'designation' => $validated['designation'] ?? null,
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'operating_unit_id' => $operatingUnitId,
-            'is_active' => false, // Inactive until approved
-            'approval_status' => 'pending',
-            'approval_remarks' => ! empty($validated['justification']) ? 'Justification: '.$validated['justification'] : null,
-        ]);
+        $justificationText = ! empty($validated['justification']) ? 'Justification: '.$validated['justification'] : null;
 
-        $user->assignRole($validated['role']);
+        // If user was previously declined, update their existing record and re-submit as pending
+        if ($existingUser && $existingUser->isRejected()) {
+            $existingUser->update([
+                'name' => $validated['name'],
+                'designation' => $validated['designation'] ?? null,
+                'password' => Hash::make($validated['password']),
+                'operating_unit_id' => $operatingUnitId,
+                'is_active' => false,
+                'approval_status' => 'pending',
+                'approval_remarks' => $justificationText ? 'Re-application '.$justificationText : null,
+            ]);
+
+            $existingUser->syncRoles([$validated['role']]);
+            $user = $existingUser;
+            $statusMessage = 'Your account request has been re-submitted successfully! Please wait for the PMO Administrator to verify and approve your access.';
+        } else {
+            // New applicant registration
+            $user = User::create([
+                'name' => $validated['name'],
+                'designation' => $validated['designation'] ?? null,
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'operating_unit_id' => $operatingUnitId,
+                'is_active' => false,
+                'approval_status' => 'pending',
+                'approval_remarks' => $justificationText,
+            ]);
+
+            $user->assignRole($validated['role']);
+            $statusMessage = 'Your account request has been submitted successfully! Please wait for the PMO Administrator to verify and approve your access.';
+        }
+
         $user->load(['operatingUnit', 'roles']);
 
+        // 1. Send confirmation email to applicant
         try {
             Mail::to($user->email)->send(new AccountRequestSubmittedMail($user));
         } catch (Throwable $e) {
             report($e);
         }
 
-        return redirect()->route('login')->with(
-            'status',
-            'Your account request has been submitted successfully! Please wait for the PMO Administrator to verify and approve your access.'
-        );
+        // 2. Alert PMO administrators about the new pending request
+        try {
+            $adminEmails = User::role(['superadmin', 'admin'])
+                ->where('is_active', true)
+                ->where('approval_status', 'approved')
+                ->pluck('email')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (! empty($adminEmails)) {
+                Mail::to($adminEmails)->send(new NewAccountRequestAlertMail($user));
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        try {
+            AuditLog::record(
+                action: 'auth.register',
+                auditable: $user,
+                newValues: [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $validated['role'],
+                    'operating_unit_id' => $user->operating_unit_id,
+                ],
+                request: $request,
+                userId: $user->id
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        return redirect()->route('login')->with('status', $statusMessage);
     }
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        if ($user) {
+            try {
+                AuditLog::record(
+                    action: 'auth.logout',
+                    auditable: $user,
+                    request: $request,
+                    userId: $user->id
+                );
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();
@@ -240,10 +349,20 @@ class AuthController extends Controller
             }
         );
 
-        return $status === PasswordBroker::PASSWORD_RESET
-            ? redirect()->route('login')->with('status', __($status))
-            : back()->withInput($request->only('email'))
-                ->withErrors(['email' => __($status)]);
+        if ($status === PasswordBroker::PASSWORD_RESET) {
+            if ($user) {
+                try {
+                    Mail::to($user->email)->send(new PasswordChangedMail($user, now()->format('F j, Y g:i A'), $request->ip()));
+                } catch (Throwable $e) {
+                    report($e);
+                }
+            }
+
+            return redirect()->route('login')->with('status', __($status));
+        }
+
+        return back()->withInput($request->only('email'))
+            ->withErrors(['email' => __($status)]);
     }
 
     /**
