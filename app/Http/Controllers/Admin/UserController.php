@@ -26,6 +26,8 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeView();
+
         $query = User::with(['operatingUnit', 'roles'])->latest();
         // Search by name or email
         if ($search = $request->input('search')) {
@@ -72,6 +74,8 @@ class UserController extends Controller
 
     public function create()
     {
+        $this->authorizeManage();
+
         $operatingUnits = OperatingUnit::where('is_active', true)->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
 
@@ -80,6 +84,8 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeManage();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
@@ -135,6 +141,8 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
+        $this->authorizeManage();
+
         $operatingUnits = OperatingUnit::where('is_active', true)->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
         $user->load('roles');
@@ -144,6 +152,8 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->authorizeManage();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
@@ -214,6 +224,8 @@ class UserController extends Controller
 
     public function bulkAction(Request $request): RedirectResponse
     {
+        $this->authorizeManage();
+
         $validated = $request->validate([
             'action' => ['required', 'in:approve,reject'],
             'user_ids' => ['required', 'array', 'min:1'],
@@ -288,6 +300,8 @@ class UserController extends Controller
 
     public function toggleStatus(User $user)
     {
+        $this->authorizeManage();
+
         if ($user->id === Auth::id()) {
             return back()->with('error', 'You cannot deactivate your own account.');
         }
@@ -313,6 +327,8 @@ class UserController extends Controller
 
     public function approve(Request $request, User $user)
     {
+        $this->authorizeManage();
+
         $wasApproved = $user->isApproved();
 
         $user->update([
@@ -341,6 +357,8 @@ class UserController extends Controller
 
     public function reject(Request $request, User $user)
     {
+        $this->authorizeManage();
+
         if ($user->id === Auth::id()) {
             return back()->with('error', 'You cannot reject your own account.');
         }
@@ -382,6 +400,8 @@ class UserController extends Controller
 
     public function resetPassword(Request $request, User $user)
     {
+        $this->authorizeManage();
+
         $validated = $request->validate([
             'new_password' => ['required', 'string', Password::defaults()],
         ]);
@@ -439,5 +459,21 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('admin.users.index')->with('status', "User {$name} has been deleted.");
+    }
+
+    private function authorizeView(): void
+    {
+        $user = Auth::user();
+        if (! $user || (! $user->can('users.view') && ! $user->can('users.manage') && ! $user->hasAnyRole(['superadmin', 'admin']))) {
+            abort(403, 'Unauthorized access to User Management.');
+        }
+    }
+
+    private function authorizeManage(): void
+    {
+        $user = Auth::user();
+        if (! $user || (! $user->can('users.manage') && ! $user->hasAnyRole(['superadmin', 'admin']))) {
+            abort(403, 'Unauthorized to manage users.');
+        }
     }
 }

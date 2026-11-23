@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @method static \Illuminate\Database\Eloquent\Builder<static> coveredForReporting()
+ */
 class OperatingUnit extends Model
 {
     use HasFactory;
@@ -49,9 +52,11 @@ class OperatingUnit extends Model
 
     /**
      * Exclude evaluating/oversight PMO units from covered reporting operating units.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @return void
      */
-    #[Scope]
-    protected function coveredForReporting(Builder $query): void
+    public function scopeCoveredForReporting(Builder $query): void
     {
         $query->where(function (Builder $subQuery): void {
             $subQuery->whereNull('code')

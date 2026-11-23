@@ -7,11 +7,14 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuditLogController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorizeAccess();
+
         $query = AuditLog::with(['user.operatingUnit'])->latest();
 
         // Search by action, IP, or user name/email
@@ -62,5 +65,13 @@ class AuditLogController extends Controller
         ];
 
         return view('admin.audit-logs.index', compact('logs', 'distinctActions', 'users', 'metrics'));
+    }
+
+    private function authorizeAccess(): void
+    {
+        $user = Auth::user();
+        if (! $user || (! $user->can('audit_logs.view') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
+            abort(403, 'Unauthorized access to Audit Logs.');
+        }
     }
 }

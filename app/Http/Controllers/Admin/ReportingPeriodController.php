@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ReportingPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class ReportingPeriodController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeAccess();
+
         $query = ReportingPeriod::withCount('monthlyReports')
             ->orderByDesc('year')
             ->orderByDesc('month');
@@ -50,6 +53,8 @@ class ReportingPeriodController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAccess();
+
         $validated = $request->validate([
             'year' => ['required', 'integer', 'min:2020', 'max:2050'],
             'month' => [
@@ -93,6 +98,8 @@ class ReportingPeriodController extends Controller
 
     public function update(Request $request, ReportingPeriod $reportingPeriod)
     {
+        $this->authorizeAccess();
+
         $validated = $request->validate([
             'year' => ['required', 'integer', 'min:2020', 'max:2050'],
             'month' => [
@@ -139,6 +146,8 @@ class ReportingPeriodController extends Controller
 
     public function toggleActive(ReportingPeriod $reportingPeriod)
     {
+        $this->authorizeAccess();
+
         if ($reportingPeriod->is_active) {
             $reportingPeriod->update([
                 'is_active' => false,
@@ -162,6 +171,8 @@ class ReportingPeriodController extends Controller
 
     public function destroy(ReportingPeriod $reportingPeriod)
     {
+        $this->authorizeAccess();
+
         if ($reportingPeriod->monthlyReports()->exists()) {
             return redirect()->route('admin.reporting-periods.index')
                 ->withErrors(['error' => 'Cannot delete this reporting cycle because it already contains linked division monthly accomplishment submissions.']);
@@ -172,5 +183,13 @@ class ReportingPeriodController extends Controller
 
         return redirect()->route('admin.reporting-periods.index')
             ->with('status', "Reporting cycle '{$name}' has been deleted.");
+    }
+
+    private function authorizeAccess(): void
+    {
+        $user = Auth::user();
+        if (! $user || (! $user->can('reporting_periods.manage') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
+            abort(403, 'Unauthorized access to Reporting Periods management.');
+        }
     }
 }

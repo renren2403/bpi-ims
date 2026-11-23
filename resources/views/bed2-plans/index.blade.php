@@ -4,29 +4,141 @@
 
 @section('content')
     <div class="space-y-6">
-        <!-- Header -->
-        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        @php
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+            $isPmo = $user->can('bed2.manage_all_units') || $user->hasAnyRole(['superadmin', 'admin', 'evaluator']);
+            $isEncoder = $user->hasRole('encoder') || $user->can('bed2.submit_head');
+            $isHead = $user->hasRole('ou-head') || $user->can('bed2.head_endorse');
+            $selectedOuId = request('operating_unit_id') ?: ($isPmo ? null : $user->operating_unit_id);
+            $selectedOu = $selectedOuId ? $operatingUnits->firstWhere('id', $selectedOuId) : null;
+        @endphp
+
+        <!-- Header & Top Action Controls -->
+        <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
             <div>
                 <div class="flex items-center gap-2">
                     <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">BED-2 Physical Target Plans</h2>
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
                         FY {{ $year }}
                     </span>
+                    @if ($selectedOu)
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 uppercase tracking-wide border border-slate-200">
+                            {{ $selectedOu->name }} ({{ $selectedOu->code }})
+                        </span>
+                    @endif
                 </div>
                 <p class="text-xs text-slate-500 mt-0.5">
                     Annual physical performance commitments, milestone allocations, and baseline locks across operating units.
                 </p>
             </div>
 
-            @hasanyrole('superadmin|admin|evaluator|encoder|ou-head')
-                <a href="{{ route('bed2-plans.create', ['year' => $year]) }}"
-                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-2 self-start sm:self-auto">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Encode New Target Plan
-                </a>
-            @endhasanyrole
+            <!-- Contextual Workflow Action Buttons -->
+            <div class="flex items-center gap-2.5 flex-wrap self-start lg:self-auto">
+                <!-- 1. OU Encoder Batch Submit -->
+                @if ($isEncoder && ($metrics['draft'] > 0 || $metrics['returned'] > 0))
+                    <form method="POST" action="{{ route('bed2-plans.batch-submit-head') }}" class="inline">
+                        @csrf
+                        <input type="hidden" name="year" value="{{ $year }}">
+                        <input type="hidden" name="operating_unit_id" value="{{ $user->operating_unit_id }}">
+                        <button type="submit"
+                            onclick="return confirm('Submit all {{ $metrics['draft'] + $metrics['returned'] }} draft targets to Division Chief for review?');"
+                            class="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-600/20 transition flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                            <span>Submit to Division Chief ({{ $metrics['draft'] + $metrics['returned'] }})</span>
+                        </button>
+                    </form>
+                @endif
+
+                <!-- 2. Division Chief Batch Endorse -->
+                @if ($isHead && $metrics['pending_head'] > 0)
+                    <form method="POST" action="{{ route('bed2-plans.batch-head-approve') }}" class="inline">
+                        @csrf
+                        <input type="hidden" name="year" value="{{ $year }}">
+                        <input type="hidden" name="operating_unit_id" value="{{ $user->operating_unit_id }}">
+                        <button type="submit"
+                            onclick="return confirm('Endorse all {{ $metrics['pending_head'] }} target plans to PMO for final validation?');"
+                            class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 transition flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Endorse to PMO ({{ $metrics['pending_head'] }})</span>
+                        </button>
+                    </form>
+
+                    <button type="button" onclick="openReturnModal('{{ $user->operating_unit_id }}')"
+                        class="px-3.5 py-2.5 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 font-bold text-xs rounded-xl transition">
+                        ↩ Return to Encoder
+                    </button>
+                @endif
+
+                <!-- 3. PMO Approving & Governance Actions -->
+                @if ($isPmo)
+                    @if ($selectedOuId && ($metrics['pending_pmo'] > 0 || $metrics['pending_head'] > 0))
+                        <form method="POST" action="{{ route('bed2-plans.batch-pmo-approve') }}" class="inline">
+                            @csrf
+                            <input type="hidden" name="year" value="{{ $year }}">
+                            <input type="hidden" name="operating_unit_id" value="{{ $selectedOuId }}">
+                            <button type="submit"
+                                onclick="return confirm('Officially approve and lock annual baseline targets for {{ $selectedOu?->name }} (FY {{ $year }})?');"
+                                class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Lock &amp; Approve Baseline</span>
+                            </button>
+                        </form>
+
+                        <button type="button" onclick="openReturnModal('{{ $selectedOuId }}')"
+                            class="px-3.5 py-2.5 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 font-bold text-xs rounded-xl transition">
+                            ↩ Return for Revision
+                        </button>
+                    @endif
+                @endif
+
+                <!-- Official Government DBM BED-2 Print & CSV Export Actions -->
+                <div class="inline-flex rounded-xl shadow-sm">
+                    <a href="{{ route('bed2-plans.export.print', array_filter(['year' => $year, 'operating_unit_id' => $selectedOuId])) }}" target="_blank"
+                        class="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-extrabold text-xs rounded-l-xl transition flex items-center gap-1.5"
+                        title="Print Official DBM BED Form No. 2">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        <span>Print DBM BED-2</span>
+                    </a>
+                    <a href="{{ route('bed2-plans.export.csv', array_filter(['year' => $year, 'operating_unit_id' => $selectedOuId])) }}"
+                        class="px-3 py-2.5 bg-white border-y border-r border-slate-200 hover:bg-slate-50 text-emerald-700 font-extrabold text-xs rounded-r-xl transition flex items-center gap-1"
+                        title="Download CSV / Excel">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>CSV</span>
+                    </a>
+                </div>
+
+                <!-- Encode Target Plan Button (Accessible to both PMO and OU Encoder) -->
+                @can('bed2.create')
+                    <a href="{{ route('bed2-plans.create', array_filter(['year' => $year, 'operating_unit_id' => $selectedOuId])) }}"
+                        class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-2">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>{{ $isPmo && $selectedOu ? "Add PAP for {$selectedOu->code}" : 'Encode New Target Plan' }}</span>
+                    </a>
+                @else
+                    @hasanyrole('superadmin|admin|evaluator|encoder')
+                        <a href="{{ route('bed2-plans.create', array_filter(['year' => $year, 'operating_unit_id' => $selectedOuId])) }}"
+                            class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Encode New Target Plan</span>
+                        </a>
+                    @endhasanyrole
+                @endcan
+            </div>
         </div>
 
         @if (session('status'))
@@ -106,11 +218,11 @@
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition font-semibold">
                 </div>
 
-                @hasanyrole('superadmin|admin|evaluator|higher-up')
+                @if ($isPmo)
                     <div>
-                        <select name="operating_unit_id"
+                        <select name="operating_unit_id" onchange="this.form.submit()"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition font-semibold">
-                            <option value="">All Operating Units</option>
+                            <option value="">All Operating Units (Bureau-Wide)</option>
                             @foreach ($operatingUnits as $ou)
                                 <option value="{{ $ou->id }}" {{ request('operating_unit_id') == $ou->id ? 'selected' : '' }}>
                                     {{ $ou->name }} ({{ $ou->code }})
@@ -122,7 +234,7 @@
                     <div class="px-3.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold border border-slate-200 truncate">
                         🏢 {{ auth()->user()->operatingUnit?->name ?? 'Assigned Operating Unit' }}
                     </div>
-                @endhasanyrole
+                @endif
 
                 <div>
                     <select name="pap_id"
@@ -130,7 +242,7 @@
                         <option value="">All Programs / PAPs</option>
                         @foreach ($paps as $p)
                             <option value="{{ $p->id }}" {{ request('pap_id') == $p->id ? 'selected' : '' }}>
-                                {{ $p->code }} - {{ Str::limit($p->name, 35) }}
+                                {{ $p->code }} - {{ Str::limit($p->name, 65) }}
                             </option>
                         @endforeach
                     </select>
@@ -152,7 +264,7 @@
                     <thead class="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase tracking-wider font-extrabold">
                         <tr>
                             <th class="p-4">Operating Unit</th>
-                            <th class="p-4">PAP & Performance Indicator</th>
+                            <th class="p-4">PAP &amp; Performance Indicator</th>
                             <th class="p-4 text-center">Unit</th>
                             <th class="p-4 text-right">Annual Target</th>
                             <th class="p-4 text-center">Quarterly Breakdown (Q1–Q4)</th>
@@ -184,7 +296,7 @@
                                         {{ $plan->performanceIndicator?->code }} &bull; {{ $plan->pap?->name }}
                                     </p>
                                     @if ($plan->remarks)
-                                        <p class="text-[10px] text-rose-600 italic mt-1 bg-rose-50/60 p-1 rounded-md border border-rose-100">
+                                        <p class="text-[10px] text-rose-600 italic mt-1 bg-rose-50/60 p-1.5 rounded-md border border-rose-100">
                                             💬 {{ $plan->remarks }}
                                         </p>
                                     @endif
@@ -221,10 +333,19 @@
                                     </div>
                                 </td>
 
-                                <td class="p-4 text-center whitespace-nowrap">
-                                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold border uppercase tracking-wider {{ $plan->statusBadgeClass() }}">
-                                        {{ $plan->statusLabel() }}
-                                    </span>
+                                <td class="p-4 text-center whitespace-nowrap space-y-1">
+                                    <div>
+                                        <span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold border uppercase tracking-wider {{ $plan->statusBadgeClass() }}">
+                                            {{ $plan->statusLabel() }}
+                                        </span>
+                                    </div>
+                                    @if (! $plan->isBalanced())
+                                        <div>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300" title="Monthly milestones do not sum to annual target">
+                                                ⚠️ Unbalanced
+                                            </span>
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td class="p-4 text-right space-x-1.5 whitespace-nowrap">
@@ -233,20 +354,35 @@
                                         View
                                     </a>
 
-                                    @if ($plan->isEditable() && ($plan->operating_unit_id === auth()->user()->operating_unit_id || auth()->user()->hasAnyRole(['superadmin', 'admin'])))
+                                    <!-- PMO Edit (Authorized to adjust OU inputs directly anytime) -->
+                                    @if ($isPmo)
+                                        <a href="{{ route('bed2-plans.edit', $plan) }}"
+                                            class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-[11px] border border-indigo-200 transition inline-block">
+                                            Edit
+                                        </a>
+                                    <!-- Encoder Edit (Allowed when draft or returned) -->
+                                    @elseif ($plan->isEditable() && $plan->operating_unit_id === auth()->user()->operating_unit_id)
                                         <a href="{{ route('bed2-plans.edit', $plan) }}"
                                             class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200 transition inline-block">
                                             Edit
                                         </a>
 
-                                        <form method="POST" action="{{ route('bed2-plans.submit-head', $plan) }}" class="inline">
-                                            @csrf
-                                            <button type="submit"
-                                                onclick="return confirm('Submit this plan to Division Chief for review?');"
-                                                class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200 transition">
-                                                Submit
-                                            </button>
-                                        </form>
+                                        @if ($plan->isBalanced())
+                                            <form method="POST" action="{{ route('bed2-plans.submit-head', $plan) }}" class="inline">
+                                                @csrf
+                                                <button type="submit"
+                                                    onclick="return confirm('Submit this plan to Division Chief for review?');"
+                                                    class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200 transition">
+                                                    Submit
+                                                </button>
+                                            </form>
+                                        @else
+                                            <a href="{{ route('bed2-plans.edit', $plan) }}"
+                                                class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-300 transition"
+                                                title="Monthly milestones must balance with annual target before submission">
+                                                Balance to Submit
+                                            </a>
+                                        @endif
                                     @endif
                                 </td>
                             </tr>
@@ -270,4 +406,46 @@
             </div>
         </div>
     </div>
+
+    <!-- Return Modal for Revision Remarks -->
+    <div id="returnModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Return Plans for Revision</h3>
+                <button type="button" onclick="closeReturnModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+            </div>
+
+            <form method="POST" action="{{ route('bed2-plans.batch-return') }}" class="space-y-4 text-xs">
+                @csrf
+                <input type="hidden" name="year" value="{{ $year }}">
+                <input type="hidden" name="operating_unit_id" id="returnOuId" value="">
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Revision Remarks / Instructions <span class="text-rose-500">*</span></label>
+                    <textarea name="remarks" required rows="3" placeholder="Explain the required revisions, adjustments in quarterly allocations, etc..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white font-medium"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closeReturnModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold transition">
+                        Return to Encoder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openReturnModal(ouId) {
+            document.getElementById('returnOuId').value = ouId;
+            document.getElementById('returnModal').classList.remove('hidden');
+        }
+
+        function closeReturnModal() {
+            document.getElementById('returnModal').classList.add('hidden');
+        }
+    </script>
 @endsection

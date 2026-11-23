@@ -6,9 +6,12 @@ use App\Http\Controllers\Admin\OperatingUnitController;
 use App\Http\Controllers\Admin\PAPController;
 use App\Http\Controllers\Admin\PerformanceIndicatorController;
 use App\Http\Controllers\Admin\ReportingPeriodController;
+use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Bed2PlanController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Head\ReviewController as HeadReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnderConstructionController;
 use App\Models\OperatingUnit;
@@ -64,10 +67,16 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     // BED-2 Target Plans Module
+    Route::post('/bed2-plans/batch-submit-head', [Bed2PlanController::class, 'batchSubmitHead'])->name('bed2-plans.batch-submit-head');
+    Route::post('/bed2-plans/batch-head-approve', [Bed2PlanController::class, 'batchHeadApprove'])->name('bed2-plans.batch-head-approve');
+    Route::post('/bed2-plans/batch-pmo-approve', [Bed2PlanController::class, 'batchPmoApprove'])->name('bed2-plans.batch-pmo-approve');
+    Route::post('/bed2-plans/batch-return', [Bed2PlanController::class, 'batchReturn'])->name('bed2-plans.batch-return');
     Route::post('/bed2-plans/{bed2Plan}/submit-head', [Bed2PlanController::class, 'submitToHead'])->name('bed2-plans.submit-head');
     Route::post('/bed2-plans/{bed2Plan}/head-approve', [Bed2PlanController::class, 'headApprove'])->name('bed2-plans.head-approve');
     Route::post('/bed2-plans/{bed2Plan}/return', [Bed2PlanController::class, 'returnPlan'])->name('bed2-plans.return');
     Route::post('/bed2-plans/{bed2Plan}/pmo-approve', [Bed2PlanController::class, 'pmoApprove'])->name('bed2-plans.pmo-approve');
+    Route::get('/bed2-plans/export/print', [Bed2PlanController::class, 'printDocument'])->name('bed2-plans.export.print');
+    Route::get('/bed2-plans/export/csv', [Bed2PlanController::class, 'exportCsv'])->name('bed2-plans.export.csv');
     Route::resource('bed2-plans', Bed2PlanController::class)->parameters(['bed2-plans' => 'bed2Plan']);
     Route::post('/api/quick-pap', [PAPController::class, 'quickStore'])->name('paps.quick-store');
     Route::post('/api/quick-indicator', [PerformanceIndicatorController::class, 'quickStore'])->name('indicators.quick-store');
@@ -75,7 +84,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/unlock-requests', [UnderConstructionController::class, 'unlockRequests'])->name('unlock-requests.index');
     // 1. PMO GOVERNANCE & ADMINISTRATION Routes (Superadmin, Admin, and PMO Evaluators)
     Route::middleware(['role:superadmin|admin|evaluator'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', fn () => view('dashboard.admin'))->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
         // User Management Module
         Route::post('users/bulk', [UserController::class, 'bulkAction'])->name('users.bulk');
         Route::resource('users', UserController::class)->except(['show']);
@@ -98,22 +107,29 @@ Route::middleware('auth')->group(function () {
         Route::patch('indicators/{indicator}/toggle-status', [PerformanceIndicatorController::class, 'toggleStatus'])->name('indicators.toggle-status');
         Route::delete('indicators/{indicator}', [PerformanceIndicatorController::class, 'destroy'])->name('indicators.destroy');
 
+        // Dynamic Roles & Permissions Matrix
+        Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles-permissions.index');
+        Route::post('/roles-permissions/toggle', [RolePermissionController::class, 'toggle'])->name('roles-permissions.toggle');
+        Route::post('/roles-permissions/permissions', [RolePermissionController::class, 'storePermission'])->name('roles-permissions.permissions.store');
+        Route::post('/roles-permissions/roles', [RolePermissionController::class, 'storeRole'])->name('roles-permissions.roles.store');
+
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });
     // 2. EVALUATOR (PMO) Routes
     Route::middleware(['role:evaluator'])->prefix('evaluator')->name('evaluator.')->group(function () {
-        Route::get('/dashboard', fn () => view('dashboard.evaluator'))->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'evaluator'])->name('dashboard');
     });
     // 3. OU HEAD / DIVISION CHIEF Routes
     Route::middleware(['role:ou-head'])->prefix('head')->name('head.')->group(function () {
-        Route::get('/dashboard', fn () => view('dashboard.head'))->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'head'])->name('dashboard');
+        Route::get('/for-review', [HeadReviewController::class, 'index'])->name('reviews.index');
     });
     // 4. ENCODER Routes
     Route::middleware(['role:encoder'])->prefix('encoder')->name('encoder.')->group(function () {
-        Route::get('/dashboard', fn () => view('dashboard.encoder'))->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'encoder'])->name('dashboard');
     });
     // 5. HIGHER-UP / EXECUTIVE Routes
     Route::middleware(['role:higher-up'])->prefix('executive')->name('executive.')->group(function () {
-        Route::get('/dashboard', fn () => view('dashboard.executive'))->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'executive'])->name('dashboard');
     });
 });

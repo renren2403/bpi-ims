@@ -8,12 +8,15 @@ use App\Http\Controllers\Controller;
 use App\Models\OperatingUnit;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class OperatingUnitController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeAccess();
+
         $query = OperatingUnit::withCount(['users', 'monthlyReports']);
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -62,6 +65,8 @@ class OperatingUnitController extends Controller
 
     public function create()
     {
+        $this->authorizeAccess();
+
         $users = User::where('is_active', true)->orderBy('name')->get();
         $classificationTypes = OperatingUnit::TYPES;
 
@@ -70,6 +75,8 @@ class OperatingUnitController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAccess();
+
         $validated = $this->validateOperatingUnit($request, true);
         OperatingUnit::create($validated);
 
@@ -79,6 +86,8 @@ class OperatingUnitController extends Controller
 
     public function edit(OperatingUnit $operatingUnit)
     {
+        $this->authorizeAccess();
+
         $users = User::where('is_active', true)->orderBy('name')->get();
         $classificationTypes = OperatingUnit::TYPES;
 
@@ -87,6 +96,8 @@ class OperatingUnitController extends Controller
 
     public function update(Request $request, OperatingUnit $operatingUnit)
     {
+        $this->authorizeAccess();
+
         $validated = $this->validateOperatingUnit($request, false, $operatingUnit);
         $operatingUnit->update($validated);
 
@@ -134,6 +145,8 @@ class OperatingUnitController extends Controller
 
     public function toggleStatus(OperatingUnit $operatingUnit)
     {
+        $this->authorizeAccess();
+
         $operatingUnit->update([
             'is_active' => ! $operatingUnit->is_active,
         ]);
@@ -145,6 +158,8 @@ class OperatingUnitController extends Controller
 
     public function destroy(OperatingUnit $operatingUnit)
     {
+        $this->authorizeAccess();
+
         // Safe delete protection: prevent accidental deletion if unit has relations
         if ($operatingUnit->users()->exists() || $operatingUnit->monthlyReports()->exists() || $operatingUnit->bed2Plans()->exists()) {
             return redirect()->back()
@@ -155,5 +170,13 @@ class OperatingUnitController extends Controller
 
         return redirect()->route('admin.operating-units.index')
             ->with('status', "Operating Unit '{$name}' has been deleted.");
+    }
+
+    private function authorizeAccess(): void
+    {
+        $user = Auth::user();
+        if (! $user || (! $user->can('operating_units.manage') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
+            abort(403, 'Unauthorized access to Operating Units management.');
+        }
     }
 }

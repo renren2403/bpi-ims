@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class PAPController extends Controller
@@ -19,6 +20,8 @@ class PAPController extends Controller
      */
     public function index(Request $request): View
     {
+        $this->authorizeAccess();
+
         $query = PAP::withCount('performanceIndicators')->orderBy('code');
 
         if ($search = $request->input('search')) {
@@ -57,6 +60,8 @@ class PAPController extends Controller
      */
     public function create(): View
     {
+        $this->authorizeAccess();
+
         $categories = PAP::CATEGORIES;
 
         return view('admin.paps.create', compact('categories'));
@@ -67,6 +72,8 @@ class PAPController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorizeAccess();
+
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:50', 'unique:paps,code'],
             'name' => ['required', 'string', 'max:255'],
@@ -103,6 +110,8 @@ class PAPController extends Controller
      */
     public function edit(PAP $pap): View
     {
+        $this->authorizeAccess();
+
         $pap->load(['performanceIndicators' => function ($q) {
             $q->orderBy('code');
         }]);
@@ -117,6 +126,8 @@ class PAPController extends Controller
      */
     public function update(Request $request, PAP $pap): RedirectResponse
     {
+        $this->authorizeAccess();
+
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:50', 'unique:paps,code,'.$pap->id],
             'name' => ['required', 'string', 'max:255'],
@@ -155,6 +166,8 @@ class PAPController extends Controller
      */
     public function toggleStatus(PAP $pap): RedirectResponse
     {
+        $this->authorizeAccess();
+
         $pap->is_active = ! $pap->is_active;
         $pap->save();
 
@@ -179,6 +192,8 @@ class PAPController extends Controller
      */
     public function destroy(PAP $pap): RedirectResponse
     {
+        $this->authorizeAccess();
+
         if ($pap->bed2Plans()->exists()) {
             return back()->with('error', "Cannot delete {$pap->code} because it has active BED-2 Target Plans attached. Please deactivate it instead.");
         }
@@ -207,6 +222,11 @@ class PAPController extends Controller
      */
     public function quickStore(Request $request): JsonResponse
     {
+        $user = Auth::user();
+        if (! $user) {
+            abort(401);
+        }
+
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:50', 'unique:paps,code'],
             'name' => ['required', 'string', 'max:255'],
@@ -238,5 +258,13 @@ class PAPController extends Controller
             'pap' => $pap,
             'message' => "Program {$pap->code} registered successfully!",
         ], 201);
+    }
+
+    private function authorizeAccess(): void
+    {
+        $user = Auth::user();
+        if (! $user || (! $user->can('paps.view') && ! $user->can('paps.create') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
+            abort(403, 'Unauthorized access to Programs and PAPs.');
+        }
     }
 }

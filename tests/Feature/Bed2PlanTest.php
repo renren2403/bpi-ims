@@ -265,4 +265,137 @@ class Bed2PlanTest extends TestCase
         $this->actingAs($encoderA)->get(route('bed2-plans.show', $planB))->assertForbidden();
         $this->actingAs($encoderA)->get(route('bed2-plans.edit', $planB))->assertForbidden();
     }
+
+    public function test_unbalanced_plan_cannot_be_submitted_to_division_chief(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $plan = Bed2Plan::factory()->create([
+            'operating_unit_id' => $unit->id,
+            'annual_target' => 100,
+            'm1_target' => 10,
+            'm2_target' => 10,
+            'm3_target' => 10,
+            'm4_target' => 10,
+            'm5_target' => 10,
+            'm6_target' => 10,
+            'm7_target' => 0,
+            'm8_target' => 0,
+            'm9_target' => 0,
+            'm10_target' => 0,
+            'm11_target' => 0,
+            'm12_target' => 0,
+            'status' => 'draft',
+        ]);
+
+        $this->assertFalse($plan->isBalanced());
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.submit-head', $plan));
+
+        $response->assertSessionHas('error');
+        $plan->refresh();
+        $this->assertSame('draft', $plan->status);
+    }
+
+    public function test_balanced_plan_can_be_submitted_to_division_chief(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $plan = Bed2Plan::factory()->create([
+            'operating_unit_id' => $unit->id,
+            'annual_target' => 120,
+            'm1_target' => 10,
+            'm2_target' => 10,
+            'm3_target' => 10,
+            'm4_target' => 10,
+            'm5_target' => 10,
+            'm6_target' => 10,
+            'm7_target' => 10,
+            'm8_target' => 10,
+            'm9_target' => 10,
+            'm10_target' => 10,
+            'm11_target' => 10,
+            'm12_target' => 10,
+            'status' => 'draft',
+        ]);
+
+        $this->assertTrue($plan->isBalanced());
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.submit-head', $plan));
+
+        $response->assertSessionHas('status');
+        $plan->refresh();
+        $this->assertSame('submitted_to_head', $plan->status);
+    }
+
+    public function test_batch_submission_blocks_when_any_plan_is_unbalanced(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $planBalanced = Bed2Plan::factory()->create([
+            'operating_unit_id' => $unit->id,
+            'year' => 2026,
+            'annual_target' => 120,
+            'm1_target' => 10, 'm2_target' => 10, 'm3_target' => 10,
+            'm4_target' => 10, 'm5_target' => 10, 'm6_target' => 10,
+            'm7_target' => 10, 'm8_target' => 10, 'm9_target' => 10,
+            'm10_target' => 10, 'm11_target' => 10, 'm12_target' => 10,
+            'status' => 'draft',
+        ]);
+
+        $planUnbalanced = Bed2Plan::factory()->create([
+            'operating_unit_id' => $unit->id,
+            'year' => 2026,
+            'annual_target' => 200,
+            'm1_target' => 10, 'm2_target' => 10, 'm3_target' => 10,
+            'm4_target' => 0, 'm5_target' => 0, 'm6_target' => 0,
+            'm7_target' => 0, 'm8_target' => 0, 'm9_target' => 0,
+            'm10_target' => 0, 'm11_target' => 0, 'm12_target' => 0,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.batch-submit-head'), [
+            'year' => 2026,
+            'operating_unit_id' => $unit->id,
+        ]);
+
+        $response->assertSessionHas('error');
+        $planBalanced->refresh();
+        $planUnbalanced->refresh();
+        $this->assertSame('draft', $planBalanced->status);
+        $this->assertSame('draft', $planUnbalanced->status);
+    }
+
+    public function test_division_chief_cannot_endorse_unbalanced_plan(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $head = $this->createUserWithRole('ou-head', ['operating_unit_id' => $unit->id]);
+
+        $plan = Bed2Plan::factory()->create([
+            'operating_unit_id' => $unit->id,
+            'annual_target' => 300,
+            'm1_target' => 10,
+            'm2_target' => 0,
+            'm3_target' => 0,
+            'm4_target' => 0,
+            'm5_target' => 0,
+            'm6_target' => 0,
+            'm7_target' => 0,
+            'm8_target' => 0,
+            'm9_target' => 0,
+            'm10_target' => 0,
+            'm11_target' => 0,
+            'm12_target' => 0,
+            'status' => 'submitted_to_head',
+        ]);
+
+        $response = $this->actingAs($head)->post(route('bed2-plans.head-approve', $plan));
+
+        $response->assertSessionHas('error');
+        $plan->refresh();
+        $this->assertSame('submitted_to_head', $plan->status);
+    }
 }

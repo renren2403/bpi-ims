@@ -93,6 +93,29 @@
             </a>
 
             <!-- Navigation Sections -->
+            @php
+                $sidebarUser = Auth::user();
+                $isSuperadminOrAdmin = $sidebarUser && $sidebarUser->hasAnyRole(['superadmin', 'admin']);
+                $isEvaluator = $sidebarUser && $sidebarUser->hasRole('evaluator');
+                $isStandardRole = $sidebarUser && $sidebarUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'ou-head', 'encoder', 'higher-up']);
+
+                // Workspace Permissions: Accessible to standard roles or users with direct permission
+                $canViewBed2 = $sidebarUser && ($isStandardRole || $sidebarUser->can('bed2.view') || $sidebarUser->can('bed2.create'));
+                $canViewReports = $sidebarUser && ($isStandardRole || $sidebarUser->can('reports.view') || $sidebarUser->can('reports.create'));
+                $canViewUnlockRequests = $sidebarUser && ($isStandardRole || $sidebarUser->can('unlock_requests.view') || $sidebarUser->can('unlock_requests.create') || $sidebarUser->can('unlock_requests.review'));
+
+                // PMO Governance Permissions (Dynamic & Role-Aware):
+                // Evaluators have operating units, PAPs, reporting periods, and audit logs by default.
+                // Evaluators DO NOT have users or roles & permissions by default unless explicitly granted.
+                $canManageOus = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('operating_units.manage'));
+                $canViewPaps = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('paps.view') || $sidebarUser->can('paps.create'));
+                $canManageUsers = $sidebarUser && ($isSuperadminOrAdmin || $sidebarUser->can('users.view') || $sidebarUser->can('users.manage'));
+                $canManageRoles = $sidebarUser && ($isSuperadminOrAdmin || $sidebarUser->can('roles.manage'));
+                $canManageReporting = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('reporting_periods.manage'));
+                $canViewAuditLogs = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('audit_logs.view'));
+
+                $hasAnyGovernanceAccess = $canManageOus || $canViewPaps || $canManageUsers || $canManageRoles || $canManageReporting || $canViewAuditLogs;
+            @endphp
             <div class="p-3.5 space-y-5">
                 <!-- Section 1: Executive Space -->
                 <div>
@@ -114,159 +137,220 @@
                             @endif
                         </a>
 
-                        <a href="{{ route('bed2-plans.index') }}"
-                            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('bed2-plans.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            <svg class="w-4 h-4 {{ request()->routeIs('bed2-plans.*') ? 'text-emerald-600' : 'text-slate-400' }}"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span>BED-2 Target Plans</span>
-                        </a>
+                        @if ($sidebarUser && ($sidebarUser->hasRole('ou-head') || $sidebarUser->can('bed2.head_endorse')))
+                            @php
+                                $pendingHeadCount = 0;
+                                if ($sidebarUser->operating_unit_id) {
+                                    $pendingHeadCount = \App\Models\Bed2Plan::where('operating_unit_id', $sidebarUser->operating_unit_id)
+                                        ->where('status', 'submitted_to_head')
+                                        ->count();
+                                }
+                            @endphp
+                            <a href="{{ route('head.reviews.index') }}"
+                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('head.reviews.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <svg class="w-4 h-4 {{ request()->routeIs('head.reviews.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                    </svg>
+                                    <span>For Review</span>
+                                </div>
+                                @if ($pendingHeadCount > 0)
+                                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-500 text-white rounded-full animate-pulse">
+                                        {{ $pendingHeadCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        @endif
 
-                        <a href="{{ route('monthly-reports.index') }}"
-                            class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('monthly-reports.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            <div class="flex items-center gap-2.5">
-                                <svg class="w-4 h-4 {{ request()->routeIs('monthly-reports.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                        @if ($canViewBed2)
+                            <a href="{{ route('bed2-plans.index') }}"
+                                class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('bed2-plans.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                <svg class="w-4 h-4 {{ request()->routeIs('bed2-plans.*') ? 'text-emerald-600' : 'text-slate-400' }}"
                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                <span>Monthly Reports</span>
-                            </div>
-                            <span
-                                class="px-2 py-0.5 text-[10px] font-extrabold bg-blue-100 text-blue-700 rounded-full">{{ date('M') }}</span>
-                        </a>
+                                <span>BED-2 Target Plans</span>
+                            </a>
+                        @endif
 
-                        <a href="{{ route('unlock-requests.index') }}"
-                            class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('unlock-requests.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            <div class="flex items-center gap-2.5">
-                                <svg class="w-4 h-4 {{ request()->routeIs('unlock-requests.*') ? 'text-emerald-600' : 'text-slate-400' }}"
-                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                                </svg>
-                                <span>Unlock Requests</span>
-                            </div>
-                            <span
-                                class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-100 text-amber-800 rounded-full">2</span>
-                        </a>
+                        @if ($canViewReports)
+                            <a href="{{ route('monthly-reports.index') }}"
+                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('monthly-reports.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <svg class="w-4 h-4 {{ request()->routeIs('monthly-reports.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    <span>Monthly Reports</span>
+                                </div>
+                                <span
+                                    class="px-2 py-0.5 text-[10px] font-extrabold bg-blue-100 text-blue-700 rounded-full">{{ date('M') }}</span>
+                            </a>
+                        @endif
+
+                        @if ($canViewUnlockRequests)
+                            <a href="{{ route('unlock-requests.index') }}"
+                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('unlock-requests.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <svg class="w-4 h-4 {{ request()->routeIs('unlock-requests.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>Unlock Requests</span>
+                                </div>
+                                <span
+                                    class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-100 text-amber-800 rounded-full">2</span>
+                            </a>
+                        @endif
                     </nav>
                 </div>
 
-                <!-- Section 2: PMO Administration & Governance (Admin & PMO Evaluators) -->
-                @hasanyrole('superadmin|admin|evaluator')
+                <!-- Section 2: PMO Administration & Governance (Dynamic Permission-Based) -->
+                @if ($hasAnyGovernanceAccess)
                     <div>
                         <p class="px-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">PMO
                             Governance</p>
                         <nav class="space-y-1">
                             <!-- Operating Units Link -->
-                            <a href="{{ route('admin.operating-units.index') }}"
-                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.operating-units.*')
-                                    ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                                <div class="flex items-center gap-2.5">
-                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.operating-units.*') ? 'text-emerald-600' : 'text-slate-400' }}"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                    </svg>
-                                    <span>Operating Units</span>
-                                </div>
-                                <span
-                                    class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
-                                    {{ \App\Models\OperatingUnit::count() }}
-                                </span>
-                            </a>
+                            @if ($canManageOus)
+                                <a href="{{ route('admin.operating-units.index') }}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.operating-units.*')
+                                        ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50'
+                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <svg class="w-4 h-4 {{ request()->routeIs('admin.operating-units.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        <span>Operating Units</span>
+                                    </div>
+                                    <span
+                                        class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
+                                        {{ \App\Models\OperatingUnit::count() }}
+                                    </span>
+                                </a>
+                            @endif
 
                             <!-- Programs / PAPs Management Link -->
-                            <a href="{{ route('admin.paps.index') }}"
-                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.paps.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                                <div class="flex items-center gap-2.5">
-                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.paps.*') ? 'text-emerald-600' : 'text-slate-400' }}"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                    </svg>
-                                    <span>Programs &amp; PAPs</span>
-                                </div>
-                                <span class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
-                                    {{ \App\Models\PAP::count() }}
-                                </span>
-                            </a>
+                            @if ($canViewPaps)
+                                <a href="{{ route('admin.paps.index') }}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.paps.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <svg class="w-4 h-4 {{ request()->routeIs('admin.paps.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                        </svg>
+                                        <span>Programs &amp; PAPs</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
+                                        {{ \App\Models\PAP::count() }}
+                                    </span>
+                                </a>
+                            @endif
 
-                            <!-- User Management Link (Existing) -->
-                            <a href="{{ route('admin.users.index') }}"
-                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.users.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                                <div class="flex items-center gap-2.5">
-                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.users.*') ? 'text-emerald-600' : 'text-slate-400' }}"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                    </svg>
-                                    <span>User Management</span>
-                                </div>
-                                @php
-                                    $pendingApprovals = 0;
-                                    try {
-                                        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'approval_status')) {
-                                            $pendingApprovals = \App\Models\User::where(
-                                                'approval_status',
-                                                'pending',
-                                            )->count();
-                                        }
-                                    } catch (\Throwable $e) {
+                            <!-- User Management Link -->
+                            @if ($canManageUsers)
+                                <a href="{{ route('admin.users.index') }}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.users.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <svg class="w-4 h-4 {{ request()->routeIs('admin.users.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                        </svg>
+                                        <span>User Management</span>
+                                    </div>
+                                    @php
                                         $pendingApprovals = 0;
-                                    }
-                                @endphp
-                                @if ($pendingApprovals > 0)
-                                    <span
-                                        class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-500 text-white rounded-full">{{ $pendingApprovals }}</span>
-                                @endif
-                            </a>
+                                        try {
+                                            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'approval_status')) {
+                                                $pendingApprovals = \App\Models\User::where(
+                                                    'approval_status',
+                                                    'pending',
+                                                )->count();
+                                            }
+                                        } catch (\Throwable $e) {
+                                            $pendingApprovals = 0;
+                                        }
+                                    @endphp
+                                    @if ($pendingApprovals > 0)
+                                        <span
+                                            class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-500 text-white rounded-full">{{ $pendingApprovals }}</span>
+                                    @endif
+                                </a>
+                            @endif
 
-                            <a href="{{ route('admin.reporting-periods.index') }}"
-                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.reporting-periods.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                                <div class="flex items-center gap-2.5">
-                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.reporting-periods.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                            <!-- Dynamic Roles & Permissions Matrix Link -->
+                            @if ($canManageRoles)
+                                <a href="{{ route('admin.roles-permissions.index') }}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.roles-permissions.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <svg class="w-4 h-4 {{ request()->routeIs('admin.roles-permissions.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        <span>Roles &amp; Permissions</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-emerald-100 text-emerald-800 rounded-full">
+                                        Matrix
+                                    </span>
+                                </a>
+                            @endif
+
+                            @if ($canManageReporting)
+                                <a href="{{ route('admin.reporting-periods.index') }}"
+                                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.reporting-periods.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <svg class="w-4 h-4 {{ request()->routeIs('admin.reporting-periods.*') ? 'text-emerald-600' : 'text-slate-400' }}"
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <span>Reporting Cycle Rules</span>
+                                    </div>
+                                    @php
+                                        $hasActiveCycle = false;
+                                        try {
+                                            $hasActiveCycle = \App\Models\ReportingPeriod::where(
+                                                'is_active',
+                                                true,
+                                            )->exists();
+                                        } catch (\Throwable $e) {
+                                            $hasActiveCycle = false;
+                                        }
+                                    @endphp
+                                    @if ($hasActiveCycle)
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
+                                            title="Active Cycle Open"></span>
+                                    @else
+                                        <span class="px-1.5 py-0.5 text-[9px] font-black bg-rose-100 text-rose-700 rounded-md"
+                                            title="No Active Cycle Configured">OFF</span>
+                                    @endif
+                                </a>
+                            @endif
+
+                            @if ($canViewAuditLogs)
+                                <a href="{{ route('admin.audit-logs.index') }}"
+                                    class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.audit-logs.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                                    <svg class="w-4 h-4 {{ request()->routeIs('admin.audit-logs.*') ? 'text-emerald-600' : 'text-slate-400' }}"
                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
-                                    <span>Reporting Cycle Rules</span>
-                                </div>
-                                @php
-                                    $hasActiveCycle = false;
-                                    try {
-                                        $hasActiveCycle = \App\Models\ReportingPeriod::where(
-                                            'is_active',
-                                            true,
-                                        )->exists();
-                                    } catch (\Throwable $e) {
-                                        $hasActiveCycle = false;
-                                    }
-                                @endphp
-                                @if ($hasActiveCycle)
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
-                                        title="Active Cycle Open"></span>
-                                @else
-                                    <span class="px-1.5 py-0.5 text-[9px] font-black bg-rose-100 text-rose-700 rounded-md"
-                                        title="No Active Cycle Configured">OFF</span>
-                                @endif
-                            </a>
-
-                            <a href="{{ route('admin.audit-logs.index') }}"
-                                class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.audit-logs.*') ? 'bg-emerald-50 text-emerald-800 shadow-sm border border-emerald-200/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                                <svg class="w-4 h-4 {{ request()->routeIs('admin.audit-logs.*') ? 'text-emerald-600' : 'text-slate-400' }}"
-                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                </svg>
-                                <span>Audit & Security Logs</span>
-                            </a>
+                                    <span>Audit & Security Logs</span>
+                                </a>
+                            @endif
                         </nav>
                     </div>
-                @endhasanyrole
+                @endif
 
                 <!-- Section 3: Account -->
                 <div>

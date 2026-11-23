@@ -1,11 +1,10 @@
-<!--executive.blade.phpss-->
 @extends('layouts.app')
 @section('title', 'Executive Briefing')
 
 @section('content')
     <div class="space-y-5">
 
-        <!-- Hero Briefing Bar (Corner-Anchored) -->
+        <!-- Hero Briefing Bar -->
         <div
             class="bg-gradient-to-r from-slate-900 via-botanic-950 to-slate-900 p-6 rounded-2xl text-white shadow-lg relative overflow-hidden flex flex-col justify-between gap-5">
             <div class="absolute -right-8 -bottom-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none">
@@ -19,9 +18,9 @@
                 <div
                     class="flex items-center gap-3 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 text-xs">
                     <span class="text-slate-300">Fiscal Period:</span>
-                    <span class="font-bold text-white">FY {{ date('Y') }} &bull; Q4</span>
+                    <span class="font-bold text-white">FY {{ $currentYear }}</span>
                     <span class="text-slate-400">&bull;</span>
-                    <span class="text-emerald-400 font-semibold">Healthy (91.4%)</span>
+                    <span class="text-emerald-400 font-semibold">{{ $complianceRate }}% Baseline Coverage</span>
                 </div>
             </div>
 
@@ -30,30 +29,29 @@
                     <h2 class="text-2xl font-extrabold tracking-tight">Bureau Physical Performance Summary</h2>
                     <p class="text-xs text-slate-300 mt-1 max-w-2xl">
                         Strategic oversight of bureau physical commitments, division accomplishment benchmarks, and COA
-                        audit defense readiness.
+                        audit defense readiness for FY {{ $currentYear }}.
                     </p>
                 </div>
 
                 <div class="flex items-center gap-3 shrink-0">
                     <div class="text-right">
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Total Delivery</p>
-                        <p class="text-base font-extrabold text-emerald-400">91.4% Target</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Total Committed Target</p>
+                        <p class="text-base font-extrabold text-emerald-400">{{ number_format($totalBureauTarget, 2) }} Units</p>
                     </div>
                     <div class="w-px h-8 bg-white/20"></div>
                     <div class="text-right">
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Compliance</p>
-                        <p class="text-base font-extrabold text-white">10 / 12 OUs</p>
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Division Compliance</p>
+                        <p class="text-base font-extrabold text-white">{{ $ousWithApprovedBed2 }} / {{ $totalOUs }} OUs</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ROW 1: 4 EXECUTIVE METRIC TILES (Corner-Anchored) -->
+        <!-- ROW 1: 4 EXECUTIVE METRIC TILES -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                 <div class="flex justify-between items-start">
-                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Overall Bureau
-                        Delivery</span>
+                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Bureau Baseline Coverage</span>
                     <div
                         class="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,19 +61,17 @@
                     </div>
                 </div>
                 <div class="mt-2">
-                    <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">91.4%</h3>
+                    <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ $complianceRate }}%</h3>
                     <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span class="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">+1.4% Over
-                            Threshold</span>
-                        <span class="text-slate-400 font-medium">Goal: 90.0%</span>
+                        <span class="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">{{ $ousWithApprovedBed2 }} OUs Approved</span>
+                        <span class="text-slate-400 font-medium">Goal: 100%</span>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                 <div class="flex justify-between items-start">
-                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Certified
-                        Divisions</span>
+                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Certified Divisions</span>
                     <div
                         class="w-11 h-11 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,40 +81,39 @@
                     </div>
                 </div>
                 <div class="mt-2">
-                    <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">10 <span
-                            class="text-lg font-semibold text-slate-400">/ 12</span></h3>
+                    <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ $ousWithApprovedBed2 }} <span
+                            class="text-lg font-semibold text-slate-400">/ {{ $totalOUs }}</span></h3>
                     <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span class="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg">83.3% On Time</span>
-                        <span class="text-slate-400 font-medium">2 In Final Review</span>
+                        <span class="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-lg">{{ $complianceRate }}% Complete</span>
+                        <span class="text-slate-400 font-medium">{{ max(0, $totalOUs - $ousWithApprovedBed2) }} In Process</span>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                 <div class="flex justify-between items-start">
-                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Major Slippage</span>
+                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Pending Validations</span>
                     <div
-                        class="w-11 h-11 rounded-xl bg-rose-50 border border-rose-200/60 flex items-center justify-center text-rose-600">
+                        class="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </div>
                 <div class="mt-2">
-                    <h3 class="text-3xl font-extrabold text-rose-600 tracking-tight">3 <span
-                            class="text-sm font-semibold text-slate-400">PAPs</span></h3>
+                    <h3 class="text-3xl font-extrabold text-amber-600 tracking-tight">{{ $pendingApprovalCount }} <span
+                            class="text-sm font-semibold text-slate-400">Plans</span></h3>
                     <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span class="text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-lg">Negative &ge; 15%</span>
-                        <span class="text-slate-400 font-medium">RCA Mandated</span>
+                        <span class="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-lg">Under Review</span>
+                        <span class="text-slate-400 font-medium">PMO & Chief</span>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                 <div class="flex justify-between items-start">
-                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Audit Defense
-                        Readiness</span>
+                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Tracked Indicators</span>
                     <div
                         class="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,62 +123,56 @@
                     </div>
                 </div>
                 <div class="mt-2">
-                    <h3 class="text-3xl font-extrabold text-emerald-600 tracking-tight">100%</h3>
+                    <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ $totalIndicatorsTracked }} <span
+                            class="text-sm font-semibold text-slate-400">PAPs</span></h3>
                     <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span class="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">Verified MOVs</span>
-                        <span class="text-slate-400 font-medium">COA Compliant</span>
+                        <span class="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">Active Bureau-wide</span>
+                        <span class="text-slate-400 font-medium">DBM Aligned</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Division Performance Rankings & Progress -->
+        <!-- Division Performance & BED-2 Progress -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div class="p-5 border-b border-slate-100 flex justify-between items-center">
                 <div>
-                    <h3 class="font-extrabold text-base text-slate-900">Operating Unit Accomplishment Rankings</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Physical accomplishment performance sorted across all bureau
-                        divisions.</p>
+                    <h3 class="font-extrabold text-base text-slate-900">Operating Unit Target Baseline Readiness</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Physical commitment baselines across all {{ $totalOUs }} operating divisions.</p>
                 </div>
-                <span class="px-3 py-1 bg-slate-100 text-slate-600 font-bold text-xs rounded-xl">FY {{ date('Y') }}
-                    Consolidated</span>
+                <span class="px-3 py-1 bg-slate-100 text-slate-600 font-bold text-xs rounded-xl">FY {{ $currentYear }} Consolidated</span>
             </div>
 
             <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-slate-900">National Plant Quarantine (NPQSD)</span>
-                        <span
-                            class="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">98.1%</span>
+                @forelse ($operatingUnits as $unit)
+                    @php
+                        $pct = $unit->total_plans_count > 0 ? min(100, round(($unit->approved_plans_count / $unit->total_plans_count) * 100)) : 0;
+                        $colorClass = $pct === 100 && $unit->total_plans_count > 0 ? 'bg-emerald-500' : ($unit->pending_pmo_count > 0 ? 'bg-amber-500' : 'bg-slate-300');
+                        $badgeColor = $pct === 100 && $unit->total_plans_count > 0 ? 'bg-emerald-100 text-emerald-800' : ($unit->total_plans_count > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600');
+                    @endphp
+                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-extrabold text-slate-900 line-clamp-1" title="{{ $unit->name }}">{{ $unit->name }}</span>
+                                <span class="text-[10px] text-slate-400 font-bold">{{ $unit->code }}</span>
+                            </div>
+                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-lg {{ $badgeColor }}">
+                                {{ $pct }}%
+                            </span>
+                        </div>
+                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div class="{{ $colorClass }} h-full rounded-full" style="width: {{ $pct }}%"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-500 flex items-center justify-between">
+                            <span>{{ $unit->approved_plans_count }} / {{ $unit->total_plans_count }} Approved</span>
+                            <a href="{{ route('bed2-plans.index', ['operating_unit_id' => $unit->id]) }}" class="text-emerald-700 font-bold hover:underline">Inspect &rarr;</a>
+                        </p>
                     </div>
-                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full rounded-full" style="width: 98.1%"></div>
+                @empty
+                    <div class="col-span-3 text-center py-8 text-slate-400 text-xs">
+                        No active operating units found.
                     </div>
-                    <p class="text-[11px] text-slate-500">12 / 12 Key Milestones Achieved &bull; Zero Slippage</p>
-                </div>
-
-                <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-slate-900">Crop Research Division (CRD)</span>
-                        <span
-                            class="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">94.2%</span>
-                    </div>
-                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full rounded-full" style="width: 94.2%"></div>
-                    </div>
-                    <p class="text-[11px] text-slate-500">8 / 8 Key Milestones Achieved &bull; -1.8% Minor Var</p>
-                </div>
-
-                <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-extrabold text-slate-900">Crop Pest Management (CPMD)</span>
-                        <span class="text-xs font-extrabold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-lg">78.5%</span>
-                    </div>
-                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                        <div class="bg-rose-500 h-full rounded-full" style="width: 78.5%"></div>
-                    </div>
-                    <p class="text-[11px] text-rose-600 font-semibold">-16.5% Slippage &bull; Severe Weather Delay</p>
-                </div>
+                @endforelse
             </div>
         </div>
 

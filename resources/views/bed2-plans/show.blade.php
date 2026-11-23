@@ -177,12 +177,43 @@
                     <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Physical Breakdown Matrix</h3>
                     <p class="text-xs text-slate-400 mt-0.5">Annual commitment partitioned across quarterly and monthly targets.</p>
                 </div>
-                <div class="px-4 py-2 rounded-xl bg-slate-900 text-white flex items-center gap-3">
-                    <span class="text-xs text-slate-300">Annual Target:</span>
-                    <span class="text-lg font-black text-emerald-400">{{ number_format($bed2Plan->annual_target, 2) }}</span>
-                    <span class="text-xs text-slate-300 font-semibold">{{ $bed2Plan->performanceIndicator?->unit_of_measure }}</span>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    @if ($bed2Plan->isBalanced())
+                        <div class="px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <span>✓</span> Balanced (100% Allocated)
+                        </div>
+                    @else
+                        @php
+                            $variance = $bed2Plan->balanceVariance();
+                        @endphp
+                        <div class="px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-amber-100 text-amber-900 border border-amber-300">
+                            <span>⚠️</span> Unbalanced ({{ $variance > 0 ? '+' : '' }}{{ number_format($variance, 2) }})
+                        </div>
+                    @endif
+                    <div class="px-4 py-2 rounded-xl bg-slate-900 text-white flex items-center gap-3">
+                        <span class="text-xs text-slate-300">Annual Target:</span>
+                        <span class="text-lg font-black text-emerald-400">{{ number_format($bed2Plan->annual_target, 2) }}</span>
+                        <span class="text-xs text-slate-300 font-semibold">{{ $bed2Plan->performanceIndicator?->unit_of_measure }}</span>
+                    </div>
                 </div>
             </div>
+
+            @if (! $bed2Plan->isBalanced() && $bed2Plan->isEditable())
+                <div class="p-4 bg-amber-50 border-b border-amber-200/70 flex items-start gap-3">
+                    <div class="p-1 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="text-xs">
+                        <p class="font-extrabold text-amber-900">Submission Blocked: Target Allocation is Unbalanced</p>
+                        <p class="text-amber-800 mt-0.5">
+                            The sum of the 12 monthly milestones (<strong>{{ number_format($bed2Plan->monthlySum(), 2) }}</strong>) does not equal the annual target commitment (<strong>{{ number_format($bed2Plan->annual_target, 2) }}</strong>).
+                            This plan cannot be submitted to the Division Chief until it is balanced. Click <strong>Edit Targets</strong> to adjust your monthly allocations.
+                        </p>
+                    </div>
+                </div>
+            @endif
 
             <div class="overflow-x-auto">
                 <table class="w-full text-center text-xs">
@@ -252,14 +283,25 @@
                         Edit Targets
                     </a>
 
-                    <form method="POST" action="{{ route('bed2-plans.submit-head', $bed2Plan) }}" class="inline">
-                        @csrf
-                        <button type="submit"
-                            onclick="return confirm('Submit this plan to Division Chief for review and endorsement?');"
-                            class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-sm transition">
-                            Submit to Division Chief &rarr;
+                    @if ($bed2Plan->isBalanced())
+                        <form method="POST" action="{{ route('bed2-plans.submit-head', $bed2Plan) }}" class="inline">
+                            @csrf
+                            <button type="submit"
+                                onclick="return confirm('Submit this plan to Division Chief for review and endorsement?');"
+                                class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-sm transition">
+                                Submit to Division Chief &rarr;
+                            </button>
+                        </form>
+                    @else
+                        <button type="button" disabled
+                            title="Cannot submit: Monthly targets do not balance with the annual target commitment."
+                            class="px-4 py-2 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 font-extrabold text-xs cursor-not-allowed flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            Unbalanced (Edit to Submit)
                         </button>
-                    </form>
+                    @endif
 
                     <form method="POST" action="{{ route('bed2-plans.destroy', $bed2Plan) }}" class="inline">
                         @csrf

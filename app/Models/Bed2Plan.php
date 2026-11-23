@@ -154,4 +154,35 @@ class Bed2Plan extends Model
             default => 'bg-slate-50 text-slate-700 border-slate-200',
         };
     }
+
+    /**
+     * Compute sum of all 12 monthly targets.
+     */
+    public function monthlySum(): float
+    {
+        return (float) (
+            $this->m1_target + $this->m2_target + $this->m3_target +
+            $this->m4_target + $this->m5_target + $this->m6_target +
+            $this->m7_target + $this->m8_target + $this->m9_target +
+            $this->m10_target + $this->m11_target + $this->m12_target
+        );
+    }
+
+    /**
+     * Calculate variance between annual target and sum of monthly milestone allocations.
+     * Positive = under-allocated (annual > sum)
+     * Negative = over-allocated (annual < sum)
+     */
+    public function balanceVariance(): float
+    {
+        return round((float) $this->annual_target - $this->monthlySum(), 2);
+    }
+
+    /**
+     * Check if monthly milestone targets strictly balance against the annual commitment.
+     */
+    public function isBalanced(): bool
+    {
+        return abs($this->balanceVariance()) < 0.01;
+    }
 }

@@ -18,7 +18,8 @@
         </div>
 
         @if ($errors->any())
-            <div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl space-y-1 shadow-sm">
+            <div
+                class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl space-y-1 shadow-sm">
                 <p class="font-extrabold">Please correct the following inputs:</p>
                 <ul class="list-disc list-inside space-y-0.5 font-normal">
                     @foreach ($errors->all() as $error)
@@ -34,44 +35,58 @@
             <!-- Section 1: Scope & Program Identification -->
             <div class="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
                 <div class="border-b border-slate-100 pb-3">
-                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">1. Indicator & Unit Assignment</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Define the operational jurisdiction, program, and performance indicator for this target baseline.</p>
+                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">1. Indicator & Unit
+                        Assignment</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Define the operational jurisdiction, program, and performance
+                        indicator for this target baseline.</p>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <!-- Operating Unit -->
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Operating Unit <span class="text-rose-500">*</span></label>
-                        @hasanyrole('superadmin|admin|evaluator')
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Operating Unit <span
+                                class="text-rose-500">*</span></label>
+                        @if (auth()->user()->can('bed2.manage_all_units') ||
+                                auth()->user()->hasAnyRole(['superadmin', 'admin', 'evaluator']))
                             <select name="operating_unit_id" required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 font-semibold transition">
                                 @foreach ($operatingUnits as $ou)
-                                    <option value="{{ $ou->id }}" {{ old('operating_unit_id', $defaultOuId) == $ou->id ? 'selected' : '' }}>
+                                    <option value="{{ $ou->id }}"
+                                        {{ old('operating_unit_id', $defaultOuId) == $ou->id ? 'selected' : '' }}>
                                         {{ $ou->name }} ({{ $ou->code }})
                                     </option>
                                 @endforeach
                             </select>
                         @else
                             <input type="hidden" name="operating_unit_id" value="{{ $defaultOuId }}">
-                            <div class="px-3.5 py-2.5 rounded-xl bg-slate-100 border border-slate-200 font-bold text-slate-800">
-                                {{ auth()->user()->operatingUnit?->name ?? 'Assigned Unit' }} ({{ auth()->user()->operatingUnit?->code ?? 'N/A' }})
+                            <div
+                                class="px-3.5 py-2.5 rounded-xl bg-slate-100 border border-slate-200 font-bold text-slate-800">
+                                {{ auth()->user()->operatingUnit?->name ?? 'Assigned Unit' }}
+                                ({{ auth()->user()->operatingUnit?->code ?? 'N/A' }})
                             </div>
-                        @endhasanyrole
+                        @endif
                     </div>
 
                     <!-- Fiscal Year -->
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Fiscal Year <span class="text-rose-500">*</span></label>
-                        <input type="number" name="year" value="{{ old('year', $year) }}" required min="2020" max="2050"
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Fiscal Year <span
+                                class="text-rose-500">*</span></label>
+                        <input type="number" name="year" value="{{ old('year', $year) }}" required min="2020"
+                            max="2050"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 font-semibold transition">
                     </div>
 
                     <!-- PAP Selector -->
                     <div>
                         <div class="flex items-center justify-between mb-1.5">
-                            <label class="block font-bold text-slate-700 uppercase tracking-wider">Program / PAP <span class="text-rose-500">*</span></label>
-                            <button type="button" onclick="openQuickPapModal()" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 px-2 py-0.5 rounded-lg transition">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                            <label class="block font-bold text-slate-700 uppercase tracking-wider">Program / PAP <span
+                                    class="text-rose-500">*</span></label>
+                            <button type="button" onclick="openQuickPapModal()"
+                                class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 px-2 py-0.5 rounded-lg transition">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M12 4v16m8-8H4"></path>
+                                </svg>
                                 <span>+ Quick Add</span>
                             </button>
                         </div>
@@ -80,7 +95,7 @@
                             <option value="">-- Select Program / Project --</option>
                             @foreach ($paps as $pap)
                                 <option value="{{ $pap->id }}" {{ old('pap_id') == $pap->id ? 'selected' : '' }}>
-                                    {{ $pap->code }} &bull; {{ Str::limit($pap->name, 35) }}
+                                    {{ $pap->code }} &bull; {{ Str::limit($pap->name, 75) }}
                                 </option>
                             @endforeach
                         </select>
@@ -90,9 +105,14 @@
                 <!-- Indicator Picker -->
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider">Performance Indicator <span class="text-rose-500">*</span></label>
-                        <button type="button" onclick="openQuickIndicatorModal()" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 px-2 py-0.5 rounded-lg transition">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider">Performance Indicator <span
+                                class="text-rose-500">*</span></label>
+                        <button type="button" onclick="openQuickIndicatorModal()"
+                            class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 px-2 py-0.5 rounded-lg transition">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4">
+                                </path>
+                            </svg>
                             <span>+ Quick Add</span>
                         </button>
                     </div>
@@ -100,7 +120,8 @@
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 font-semibold transition">
                         <option value="">-- Select Performance Indicator --</option>
                     </select>
-                    <div id="unitBadge" class="hidden mt-2 inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+                    <div id="unitBadge"
+                        class="hidden mt-2 inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
                         <span class="text-[10px] text-slate-400 uppercase font-bold">Unit of Measure:</span>
                         <span id="unitText" class="font-extrabold text-slate-800"></span>
                     </div>
@@ -111,8 +132,10 @@
             <div class="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
-                        <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">2. Physical Target Breakdown</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Enter the annual target commitment and distribute across monthly milestones.</p>
+                        <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">2. Physical Target
+                            Breakdown</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Enter the annual target commitment and distribute across
+                            monthly milestones.</p>
                     </div>
 
                     <!-- Shortcut Distribution Buttons -->
@@ -130,7 +153,8 @@
                 </div>
 
                 <!-- Annual Target Master Input & Balance Counter -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 items-center p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 items-center p-4 rounded-xl bg-slate-50 border border-slate-200/70">
                     <div>
                         <label class="block font-bold text-slate-800 uppercase tracking-wider mb-1">
                             Annual Physical Target Commitment <span class="text-rose-500">*</span>
@@ -145,10 +169,12 @@
                     <!-- Live Balance Indicator -->
                     <div class="p-3 rounded-xl border bg-white flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Monthly Sum Allocated</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Monthly Sum Allocated
+                            </p>
                             <p class="text-base font-extrabold text-slate-800" id="monthlySumText">0.00</p>
                         </div>
-                        <div id="balancePill" class="px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-emerald-100 text-emerald-800">
+                        <div id="balancePill"
+                            class="px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-emerald-100 text-emerald-800">
                             ✓ Balanced
                         </div>
                     </div>
@@ -160,25 +186,33 @@
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                         <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
                             <h4 class="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Quarter 1</h4>
-                            <span class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]" id="q1Subtotal">
+                            <span
+                                class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"
+                                id="q1Subtotal">
                                 0.00
                             </span>
                         </div>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M1 &bull; January</label>
-                                <input type="number" step="0.01" min="0" name="m1_target" value="{{ old('m1_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">January</label>
+                                <input type="number" step="0.01" min="0" name="m1_target"
+                                    value="{{ old('m1_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M2 &bull; February</label>
-                                <input type="number" step="0.01" min="0" name="m2_target" value="{{ old('m2_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">February</label>
+                                <input type="number" step="0.01" min="0" name="m2_target"
+                                    value="{{ old('m2_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M3 &bull; March</label>
-                                <input type="number" step="0.01" min="0" name="m3_target" value="{{ old('m3_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">March</label>
+                                <input type="number" step="0.01" min="0" name="m3_target"
+                                    value="{{ old('m3_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                         </div>
                     </div>
@@ -187,25 +221,33 @@
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                         <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
                             <h4 class="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Quarter 2</h4>
-                            <span class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]" id="q2Subtotal">
+                            <span
+                                class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"
+                                id="q2Subtotal">
                                 0.00
                             </span>
                         </div>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M4 &bull; April</label>
-                                <input type="number" step="0.01" min="0" name="m4_target" value="{{ old('m4_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">April</label>
+                                <input type="number" step="0.01" min="0" name="m4_target"
+                                    value="{{ old('m4_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M5 &bull; May</label>
-                                <input type="number" step="0.01" min="0" name="m5_target" value="{{ old('m5_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">May</label>
+                                <input type="number" step="0.01" min="0" name="m5_target"
+                                    value="{{ old('m5_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M6 &bull; June</label>
-                                <input type="number" step="0.01" min="0" name="m6_target" value="{{ old('m6_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">June</label>
+                                <input type="number" step="0.01" min="0" name="m6_target"
+                                    value="{{ old('m6_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                         </div>
                     </div>
@@ -214,25 +256,35 @@
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                         <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
                             <h4 class="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Quarter 3</h4>
-                            <span class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]" id="q3Subtotal">
+                            <span
+                                class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"
+                                id="q3Subtotal">
                                 0.00
                             </span>
                         </div>
                         <div class="space-y-2.5">
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase">M7 &bull; July</label>
-                                <input type="number" step="0.01" min="0" name="m7_target" value="{{ old('m7_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <input type="number" step="0.01" min="0" name="m7_target"
+                                    value="{{ old('m7_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M8 &bull; August</label>
-                                <input type="number" step="0.01" min="0" name="m8_target" value="{{ old('m8_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M8 &bull;
+                                    August</label>
+                                <input type="number" step="0.01" min="0" name="m8_target"
+                                    value="{{ old('m8_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M9 &bull; September</label>
-                                <input type="number" step="0.01" min="0" name="m9_target" value="{{ old('m9_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M9 &bull;
+                                    September</label>
+                                <input type="number" step="0.01" min="0" name="m9_target"
+                                    value="{{ old('m9_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                         </div>
                     </div>
@@ -241,25 +293,36 @@
                     <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                         <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
                             <h4 class="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Quarter 4</h4>
-                            <span class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]" id="q4Subtotal">
+                            <span
+                                class="font-mono font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"
+                                id="q4Subtotal">
                                 0.00
                             </span>
                         </div>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M10 &bull; October</label>
-                                <input type="number" step="0.01" min="0" name="m10_target" value="{{ old('m10_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M10 &bull;
+                                    October</label>
+                                <input type="number" step="0.01" min="0" name="m10_target"
+                                    value="{{ old('m10_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M11 &bull; November</label>
-                                <input type="number" step="0.01" min="0" name="m11_target" value="{{ old('m11_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M11 &bull;
+                                    November</label>
+                                <input type="number" step="0.01" min="0" name="m11_target"
+                                    value="{{ old('m11_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M12 &bull; December</label>
-                                <input type="number" step="0.01" min="0" name="m12_target" value="{{ old('m12_target', 0) }}"
-                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold" oninput="calculateTargets()">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M12 &bull;
+                                    December</label>
+                                <input type="number" step="0.01" min="0" name="m12_target"
+                                    value="{{ old('m12_target', 0) }}"
+                                    class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
+                                    oninput="calculateTargets()">
                             </div>
                         </div>
                     </div>
@@ -267,8 +330,10 @@
 
                 <!-- Remarks -->
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Encoding Remarks / Milestone Basis (Optional)</label>
-                    <textarea name="remarks" rows="2" placeholder="e.g. Target calibrated against CY approved operational budget and historical accomplishment trends."
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Encoding Remarks /
+                        Milestone Basis (Optional)</label>
+                    <textarea name="remarks" rows="2"
+                        placeholder="e.g. Target calibrated against CY approved operational budget and historical accomplishment trends."
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition">{{ old('remarks') }}</textarea>
                 </div>
             </div>
@@ -290,27 +355,34 @@
     </div>
 
     <!-- Quick Add Program (PAP) Modal -->
-    <div id="quickPapModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 text-xs animate-in fade-in zoom-in duration-150">
+    <div id="quickPapModal"
+        class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 text-xs animate-in fade-in zoom-in duration-150">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                 <div>
                     <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">Quick Add Program / PAP</h3>
                     <p class="text-xs text-slate-500">Register a new program line item without leaving this form.</p>
                 </div>
-                <button type="button" onclick="closeQuickPapModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+                <button type="button" onclick="closeQuickPapModal()"
+                    class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
             </div>
 
-            <div id="quickPapErrors" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl"></div>
+            <div id="quickPapErrors"
+                class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
+            </div>
 
             <form id="quickPapForm" onsubmit="submitQuickPap(event)" class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Program Code <span class="text-rose-500">*</span></label>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Program Code <span
+                                class="text-rose-500">*</span></label>
                         <input type="text" id="quick_pap_code" required placeholder="e.g. PAP-05"
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-bold uppercase transition">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category <span class="text-rose-500">*</span></label>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category <span
+                                class="text-rose-500">*</span></label>
                         <select id="quick_pap_category" required
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
                             @foreach ($categories as $cat)
@@ -321,13 +393,16 @@
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Program Title / Description <span class="text-rose-500">*</span></label>
-                    <input type="text" id="quick_pap_name" required placeholder="e.g. National Plant Quarantine & Quality Protection"
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Program Title /
+                        Description <span class="text-rose-500">*</span></label>
+                    <input type="text" id="quick_pap_name" required
+                        placeholder="e.g. National Plant Quarantine & Quality Protection"
                         class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Brief Mandate / Notes</label>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Brief Mandate /
+                        Notes</label>
                     <textarea id="quick_pap_description" rows="2" placeholder="Optional background or objectives..."
                         class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition"></textarea>
                 </div>
@@ -347,17 +422,23 @@
     </div>
 
     <!-- Quick Add Indicator Modal -->
-    <div id="quickIndicatorModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 text-xs animate-in fade-in zoom-in duration-150">
+    <div id="quickIndicatorModal"
+        class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-white rounded-3xl border border-slate-200/80 shadow-2xl max-w-lg w-full p-6 text-xs animate-in fade-in zoom-in duration-150">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                 <div>
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">Quick Add Performance Indicator</h3>
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">Quick Add Performance Indicator
+                    </h3>
                     <p class="text-xs text-slate-500">Register a new indicator under the selected program.</p>
                 </div>
-                <button type="button" onclick="closeQuickIndicatorModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+                <button type="button" onclick="closeQuickIndicatorModal()"
+                    class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
             </div>
 
-            <div id="quickIndErrors" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl"></div>
+            <div id="quickIndErrors"
+                class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
+            </div>
 
             <div class="mb-4 p-3 bg-slate-50 border border-slate-200/70 rounded-xl">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Program</p>
@@ -369,12 +450,14 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Indicator Code <span class="text-rose-500">*</span></label>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Indicator Code <span
+                                class="text-rose-500">*</span></label>
                         <input type="text" id="quick_ind_code" required placeholder="e.g. PI-02 or OO-1"
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-bold uppercase transition">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Type <span class="text-rose-500">*</span></label>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Type <span
+                                class="text-rose-500">*</span></label>
                         <select id="quick_ind_type" required
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
                             <option value="output">Output Indicator</option>
@@ -384,14 +467,18 @@
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Unit of Measure <span class="text-rose-500">*</span></label>
-                    <input type="text" id="quick_ind_unit" required placeholder="e.g. Permits issued, % samples passed"
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Unit of Measure <span
+                            class="text-rose-500">*</span></label>
+                    <input type="text" id="quick_ind_unit" required
+                        placeholder="e.g. Permits issued, % samples passed"
                         class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Indicator Statement / Title <span class="text-rose-500">*</span></label>
-                    <input type="text" id="quick_ind_name" required placeholder="e.g. Number of phytosanitary inspection certificates processed within standard time"
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Indicator Statement /
+                        Title <span class="text-rose-500">*</span></label>
+                    <input type="text" id="quick_ind_name" required
+                        placeholder="e.g. Number of phytosanitary inspection certificates processed within standard time"
                         class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
                 </div>
 
@@ -508,7 +595,10 @@
                 }
 
                 // Append new PAP to papsData
-                const newPap = { ...data.pap, performance_indicators: [] };
+                const newPap = {
+                    ...data.pap,
+                    performance_indicators: []
+                };
                 papsData.push(newPap);
 
                 // Add to select
@@ -540,7 +630,8 @@
 
             const selectedPap = papsData.find(p => p.id == papSelect.value);
             document.getElementById('quick_ind_pap_id').value = papSelect.value;
-            document.getElementById('quickIndPapTitle').textContent = selectedPap ? `${selectedPap.code} - ${selectedPap.name}` : 'Selected Program';
+            document.getElementById('quickIndPapTitle').textContent = selectedPap ?
+                `${selectedPap.code} - ${selectedPap.name}` : 'Selected Program';
 
             document.getElementById('quickIndErrors').classList.add('hidden');
             document.getElementById('quick_ind_code').value = '';
@@ -622,10 +713,18 @@
         }
 
         function calculateTargets() {
-            const m1 = getMonthVal(1), m2 = getMonthVal(2), m3 = getMonthVal(3);
-            const m4 = getMonthVal(4), m5 = getMonthVal(5), m6 = getMonthVal(6);
-            const m7 = getMonthVal(7), m8 = getMonthVal(8), m9 = getMonthVal(9);
-            const m10 = getMonthVal(10), m11 = getMonthVal(11), m12 = getMonthVal(12);
+            const m1 = getMonthVal(1),
+                m2 = getMonthVal(2),
+                m3 = getMonthVal(3);
+            const m4 = getMonthVal(4),
+                m5 = getMonthVal(5),
+                m6 = getMonthVal(6);
+            const m7 = getMonthVal(7),
+                m8 = getMonthVal(8),
+                m9 = getMonthVal(9);
+            const m10 = getMonthVal(10),
+                m11 = getMonthVal(11),
+                m12 = getMonthVal(12);
 
             const q1 = m1 + m2 + m3;
             const q2 = m4 + m5 + m6;
@@ -646,14 +745,17 @@
             const balancePill = document.getElementById('balancePill');
 
             if (diff < 0.01 && annual > 0) {
-                balancePill.className = 'px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-emerald-100 text-emerald-800';
+                balancePill.className =
+                    'px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-emerald-100 text-emerald-800';
                 balancePill.textContent = '✓ Balanced (100% Allocated)';
             } else if (annual === 0 && total === 0) {
-                balancePill.className = 'px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-slate-100 text-slate-600';
+                balancePill.className =
+                    'px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-slate-100 text-slate-600';
                 balancePill.textContent = 'Enter Target';
             } else {
                 const remainder = (annual - total).toFixed(2);
-                balancePill.className = 'px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-amber-100 text-amber-900';
+                balancePill.className =
+                    'px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-amber-100 text-amber-900';
                 balancePill.textContent = `⚠️ Unbalanced (${remainder > 0 ? '+' : ''}${remainder})`;
             }
         }
