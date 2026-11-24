@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     // BED-2 Target Plans Module
+    Route::post('/bed2-plans/rollover',[Bed2PlanController::class, 'rolloverYear'])->name('bed2-plans.rollover');
     Route::post('/bed2-plans/batch-submit-head', [Bed2PlanController::class, 'batchSubmitHead'])->name('bed2-plans.batch-submit-head');
     Route::post('/bed2-plans/batch-head-approve', [Bed2PlanController::class, 'batchHeadApprove'])->name('bed2-plans.batch-head-approve');
     Route::post('/bed2-plans/batch-pmo-approve', [Bed2PlanController::class, 'batchPmoApprove'])->name('bed2-plans.batch-pmo-approve');

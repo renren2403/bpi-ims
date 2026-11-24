@@ -264,23 +264,21 @@
                         </div>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M7 &bull; July</label>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">July</label>
                                 <input type="number" step="0.01" min="0" name="m7_target"
                                     value="{{ old('m7_target', 0) }}"
                                     class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
                                     oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M8 &bull;
-                                    August</label>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">August</label>
                                 <input type="number" step="0.01" min="0" name="m8_target"
                                     value="{{ old('m8_target', 0) }}"
                                     class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
                                     oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M9 &bull;
-                                    September</label>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">September</label>
                                 <input type="number" step="0.01" min="0" name="m9_target"
                                     value="{{ old('m9_target', 0) }}"
                                     class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
@@ -301,24 +299,21 @@
                         </div>
                         <div class="space-y-2.5">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M10 &bull;
-                                    October</label>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">October</label>
                                 <input type="number" step="0.01" min="0" name="m10_target"
                                     value="{{ old('m10_target', 0) }}"
                                     class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
                                     oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M11 &bull;
-                                    November</label>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">November</label>
                                 <input type="number" step="0.01" min="0" name="m11_target"
                                     value="{{ old('m11_target', 0) }}"
                                     class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
                                     oninput="calculateTargets()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase">M12 &bull;
-                                    December</label>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase">December</label>
                                 <input type="number" step="0.01" min="0" name="m12_target"
                                     value="{{ old('m12_target', 0) }}"
                                     class="month-input w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold"
@@ -327,7 +322,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Remarks -->
                 <div>
                     <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Encoding Remarks /
@@ -383,12 +377,13 @@
                     <div>
                         <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category <span
                                 class="text-rose-500">*</span></label>
-                        <select id="quick_pap_category" required
+                        <input type="text" id="quick_pap_category" list="quick_pap_category_options" placeholder="e.g. II. SUPPORT TO OPERATIONS" required
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
+                        <datalist id="quick_pap_category_options">
                             @foreach ($categories as $cat)
-                                <option value="{{ $cat }}">{{ $cat }}</option>
+                                <option value="{{ $cat }}"></option>
                             @endforeach
-                        </select>
+                        </datalist>
                     </div>
                 </div>
 

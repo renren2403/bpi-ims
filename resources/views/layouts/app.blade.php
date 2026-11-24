@@ -97,24 +97,52 @@
                 $sidebarUser = Auth::user();
                 $isSuperadminOrAdmin = $sidebarUser && $sidebarUser->hasAnyRole(['superadmin', 'admin']);
                 $isEvaluator = $sidebarUser && $sidebarUser->hasRole('evaluator');
-                $isStandardRole = $sidebarUser && $sidebarUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'ou-head', 'encoder', 'higher-up']);
+                $isStandardRole =
+                    $sidebarUser &&
+                    $sidebarUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'ou-head', 'encoder', 'higher-up']);
 
                 // Workspace Permissions: Accessible to standard roles or users with direct permission
-                $canViewBed2 = $sidebarUser && ($isStandardRole || $sidebarUser->can('bed2.view') || $sidebarUser->can('bed2.create'));
-                $canViewReports = $sidebarUser && ($isStandardRole || $sidebarUser->can('reports.view') || $sidebarUser->can('reports.create'));
-                $canViewUnlockRequests = $sidebarUser && ($isStandardRole || $sidebarUser->can('unlock_requests.view') || $sidebarUser->can('unlock_requests.create') || $sidebarUser->can('unlock_requests.review'));
+                $canViewBed2 =
+                    $sidebarUser &&
+                    ($isStandardRole || $sidebarUser->can('bed2.view') || $sidebarUser->can('bed2.create'));
+                $canViewReports =
+                    $sidebarUser &&
+                    ($isStandardRole || $sidebarUser->can('reports.view') || $sidebarUser->can('reports.create'));
+                $canViewUnlockRequests =
+                    $sidebarUser &&
+                    ($isStandardRole ||
+                        $sidebarUser->can('unlock_requests.view') ||
+                        $sidebarUser->can('unlock_requests.create') ||
+                        $sidebarUser->can('unlock_requests.review'));
 
                 // PMO Governance Permissions (Dynamic & Role-Aware):
                 // Evaluators have operating units, PAPs, reporting periods, and audit logs by default.
                 // Evaluators DO NOT have users or roles & permissions by default unless explicitly granted.
-                $canManageOus = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('operating_units.manage'));
-                $canViewPaps = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('paps.view') || $sidebarUser->can('paps.create'));
-                $canManageUsers = $sidebarUser && ($isSuperadminOrAdmin || $sidebarUser->can('users.view') || $sidebarUser->can('users.manage'));
+                $canManageOus =
+                    $sidebarUser &&
+                    ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('operating_units.manage'));
+                $canViewPaps =
+                    $sidebarUser &&
+                    ($isSuperadminOrAdmin ||
+                        $isEvaluator ||
+                        ($sidebarUser->can('paps.create') && $sidebarUser->can('paps.edit')));
+                $canManageUsers =
+                    $sidebarUser &&
+                    ($isSuperadminOrAdmin || $sidebarUser->can('users.view') || $sidebarUser->can('users.manage'));
                 $canManageRoles = $sidebarUser && ($isSuperadminOrAdmin || $sidebarUser->can('roles.manage'));
-                $canManageReporting = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('reporting_periods.manage'));
-                $canViewAuditLogs = $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('audit_logs.view'));
+                $canManageReporting =
+                    $sidebarUser &&
+                    ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('reporting_periods.manage'));
+                $canViewAuditLogs =
+                    $sidebarUser && ($isSuperadminOrAdmin || $isEvaluator || $sidebarUser->can('audit_logs.view'));
 
-                $hasAnyGovernanceAccess = $canManageOus || $canViewPaps || $canManageUsers || $canManageRoles || $canManageReporting || $canViewAuditLogs;
+                $hasAnyGovernanceAccess =
+                    $canManageOus ||
+                    $canViewPaps ||
+                    $canManageUsers ||
+                    $canManageRoles ||
+                    $canManageReporting ||
+                    $canViewAuditLogs;
             @endphp
             <div class="p-3.5 space-y-5">
                 <!-- Section 1: Executive Space -->
@@ -141,7 +169,10 @@
                             @php
                                 $pendingHeadCount = 0;
                                 if ($sidebarUser->operating_unit_id) {
-                                    $pendingHeadCount = \App\Models\Bed2Plan::where('operating_unit_id', $sidebarUser->operating_unit_id)
+                                    $pendingHeadCount = \App\Models\Bed2Plan::where(
+                                        'operating_unit_id',
+                                        $sidebarUser->operating_unit_id,
+                                    )
                                         ->where('status', 'submitted_to_head')
                                         ->count();
                                 }
@@ -157,7 +188,8 @@
                                     <span>For Review</span>
                                 </div>
                                 @if ($pendingHeadCount > 0)
-                                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-500 text-white rounded-full animate-pulse">
+                                    <span
+                                        class="px-2 py-0.5 text-[10px] font-extrabold bg-amber-500 text-white rounded-full animate-pulse">
                                         {{ $pendingHeadCount }}
                                     </span>
                                 @endif
@@ -249,7 +281,8 @@
                                         </svg>
                                         <span>Programs &amp; PAPs</span>
                                     </div>
-                                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
+                                    <span
+                                        class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-700 rounded-full">
                                         {{ \App\Models\PAP::count() }}
                                     </span>
                                 </a>
@@ -270,7 +303,12 @@
                                     @php
                                         $pendingApprovals = 0;
                                         try {
-                                            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'approval_status')) {
+                                            if (
+                                                \Illuminate\Support\Facades\Schema::hasColumn(
+                                                    'users',
+                                                    'approval_status',
+                                                )
+                                            ) {
                                                 $pendingApprovals = \App\Models\User::where(
                                                     'approval_status',
                                                     'pending',
@@ -299,7 +337,8 @@
                                         </svg>
                                         <span>Roles &amp; Permissions</span>
                                     </div>
-                                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-emerald-100 text-emerald-800 rounded-full">
+                                    <span
+                                        class="px-2 py-0.5 text-[10px] font-extrabold bg-emerald-100 text-emerald-800 rounded-full">
                                         Matrix
                                     </span>
                                 </a>
@@ -331,7 +370,8 @@
                                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
                                             title="Active Cycle Open"></span>
                                     @else
-                                        <span class="px-1.5 py-0.5 text-[9px] font-black bg-rose-100 text-rose-700 rounded-md"
+                                        <span
+                                            class="px-1.5 py-0.5 text-[9px] font-black bg-rose-100 text-rose-700 rounded-md"
                                             title="No Active Cycle Configured">OFF</span>
                                     @endif
                                 </a>

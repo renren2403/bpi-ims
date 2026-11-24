@@ -80,12 +80,13 @@
 
                         <div>
                             <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category <span class="text-rose-500">*</span></label>
-                            <select name="category" required
+                            <input type="text" name="category" list="category_options" value="{{ old('category', $pap->category) }}" placeholder="e.g. II. SUPPORT TO OPERATIONS" required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-xs font-semibold transition">
+                            <datalist id="category_options">
                                 @foreach ($categories as $cat)
-                                    <option value="{{ $cat }}" {{ old('category', $pap->category) == $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                                    <option value="{{ $cat }}"></option>
                                 @endforeach
-                            </select>
+                            </datalist>
                         </div>
 
                         <div>

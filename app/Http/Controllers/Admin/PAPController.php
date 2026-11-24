@@ -50,7 +50,7 @@ class PAPController extends Controller
             'outcome_indicators' => PerformanceIndicator::where('type', 'outcome')->count(),
         ];
 
-        $categories = PAP::CATEGORIES;
+        $categories = $this->getCategories();
 
         return view('admin.paps.index', compact('paps', 'metrics', 'categories'));
     }
@@ -62,7 +62,7 @@ class PAPController extends Controller
     {
         $this->authorizeAccess();
 
-        $categories = PAP::CATEGORIES;
+        $categories = $this->getCategories();
 
         return view('admin.paps.create', compact('categories'));
     }
@@ -116,7 +116,7 @@ class PAPController extends Controller
             $q->orderBy('code');
         }]);
 
-        $categories = PAP::CATEGORIES;
+        $categories = $this->getCategories();
 
         return view('admin.paps.edit', compact('pap', 'categories'));
     }
@@ -258,6 +258,23 @@ class PAPController extends Controller
             'pap' => $pap,
             'message' => "Program {$pap->code} registered successfully!",
         ], 201);
+    }
+
+    /**
+     * Get unique categories combining defaults and existing entries.
+     *
+     * @return array<int, string>
+     */
+    protected function getCategories(): array
+    {
+        return PAP::distinct()
+            ->whereNotNull('category')
+            ->pluck('category')
+            ->merge(PAP::CATEGORIES)
+            ->unique()
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function authorizeAccess(): void

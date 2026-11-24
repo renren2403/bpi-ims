@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Models\AuditLog;
 use App\Models\Bed2Plan;
 use App\Models\OperatingUnit;
@@ -15,7 +13,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
-
 class Bed2PlanController extends Controller
 {
     /**
@@ -25,7 +22,6 @@ class Bed2PlanController extends Controller
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         $query = Bed2Plan::with([
             'operatingUnit',
             'pap',
@@ -34,28 +30,23 @@ class Bed2PlanController extends Controller
             'headApprovedBy',
             'pmoApprovedBy',
         ]);
-
         // Role-based data isolation
         if (! $currentUser->can('bed2.manage_all_units') && ! $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'higher-up'])) {
             $query->where('operating_unit_id', $currentUser->operating_unit_id);
         } elseif ($ouId = $request->input('operating_unit_id')) {
             $query->where('operating_unit_id', $ouId);
         }
-
         // Year filter (default to current year)
         $year = (int) $request->input('year', date('Y'));
         $query->where('year', $year);
-
         // Status filter
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
-
         // PAP filter
         if ($papId = $request->input('pap_id')) {
             $query->where('pap_id', $papId);
         }
-
         // Search query (indicator name or code)
         if ($search = $request->input('search')) {
             $query->whereHas('performanceIndicator', function ($q) use ($search) {
@@ -487,12 +478,10 @@ class Bed2PlanController extends Controller
         if (! $bed2Plan->isBalanced()) {
             return back()->with('error', 'Cannot approve baseline: Target allocation is unbalanced.');
         }
-
         $bed2Plan->update([
             'status' => 'approved',
             'pmo_approved_by' => $currentUser->id,
         ]);
-
         try {
             AuditLog::record(
                 action: 'bed2.approved',
@@ -503,52 +492,158 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return back()->with('status', 'Target plan approved! Annual baseline is now officially locked for accomplishment reporting.');
     }
-
-    /**
-     * Batch submit all draft/returned plans for an Operating Unit & Year to Division Chief.
-     */
-    public function batchSubmitHead(Request $request): RedirectResponse
+    public function rolloverYear(Request $request): RedirectResponse
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
+        // 1. Validate inputs
         $validated = $request->validate([
-            'year' => ['required', 'integer'],
+            'year' => ['required', 'integer', 'min:2020', 'max:2099'],
             'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
+            'source_year' => ['nullable', 'integer', 'min:2020', 'max:2099'],
+            'copy_targets' => ['nullable', 'boolean'],
         ]);
-
-        $year = (int) $validated['year'];
+        $targetYear = (int) $validated['year'];
+        $sourceYear = (int) ($validated['source_year'] ?? ($targetYear - 1));
+        $copyTargets = $request->boolean('copy_targets', false);
+        // 2. Identify the target Operating Unit (Respects role permissions)
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator']);
         $ouId = ($isPrivileged && ! empty($validated['operating_unit_id']))
             ? (int) $validated['operating_unit_id']
             : $currentUser->operating_unit_id;
-
-        $plans = Bed2Plan::where('operating_unit_id', $ouId)
-            ->where('year', $year)
-            ->whereIn('status', ['draft', 'returned'])
+        if (! $ouId) {
+            return back()->with('error', 'Please specify an operating unit to initialize.');
+        }
+        $operatingUnit = OperatingUnit::findOrFail($ouId);
+        // 3. Find existing indicators already encoded for the target year (to avoid duplicates)
+        $existingIndicatorIds = Bed2Plan::where('operating_unit_id', $ouId)
+            ->where('year', $targetYear)
+            ->pluck('performance_indicator_id')
+            ->all();
+        // 4. Source indicators: Try previous fiscal year first; fallback to all active indicators in catalog
+        $sourcePlans = Bed2Plan::where('operating_unit_id', $ouId)
+            ->where('year', $sourceYear)
             ->get();
-
-        if ($plans->isEmpty()) {
+        $indicatorsToCreate = collect();
+        if ($sourcePlans->isNotEmpty()) {
+            foreach ($sourcePlans as $src) {
+                if (! in_array($src->performance_indicator_id, $existingIndicatorIds)) {
+                    $indicatorsToCreate->push([
+                        'pap_id' => $src->pap_id,
+                        'performance_indicator_id' => $src->performance_indicator_id,
+                        'annual_target' => $copyTargets ? $src->annual_target : 0,
+                        'q1_target' => $copyTargets ? $src->q1_target : 0,
+                        'q2_target' => $copyTargets ? $src->q2_target : 0,
+                        'q3_target' => $copyTargets ? $src->q3_target : 0,
+                        'q4_target' => $copyTargets ? $src->q4_target : 0,
+                        'm1_target' => $copyTargets ? $src->m1_target : 0,
+                        'm2_target' => $copyTargets ? $src->m2_target : 0,
+                        'm3_target' => $copyTargets ? $src->m3_target : 0,
+                        'm4_target' => $copyTargets ? $src->m4_target : 0,
+                        'm5_target' => $copyTargets ? $src->m5_target : 0,
+                        'm6_target' => $copyTargets ? $src->m6_target : 0,
+                        'm7_target' => $copyTargets ? $src->m7_target : 0,
+                        'm8_target' => $copyTargets ? $src->m8_target : 0,
+                        'm9_target' => $copyTargets ? $src->m9_target : 0,
+                        'm10_target' => $copyTargets ? $src->m10_target : 0,
+                        'm11_target' => $copyTargets ? $src->m11_target : 0,
+                        'm12_target' => $copyTargets ? $src->m12_target : 0,
+                    ]);
+                }
+            }
+        } else {
+            // First-time initialization from active indicators catalog
+            $activeIndicators = PerformanceIndicator::where('is_active', true)->get();
+            foreach ($activeIndicators as $ind) {
+                if (! in_array($ind->id, $existingIndicatorIds)) {
+                    $indicatorsToCreate->push([
+                        'pap_id' => $ind->pap_id,
+                        'performance_indicator_id' => $ind->id,
+                        'annual_target' => 0,
+                        'q1_target' => 0,
+                        'q2_target' => 0,
+                        'q3_target' => 0,
+                        'q4_target' => 0,
+                        'm1_target' => 0,
+                        'm2_target' => 0,
+                        'm3_target' => 0,
+                        'm4_target' => 0,
+                        'm5_target' => 0,
+                        'm6_target' => 0,
+                        'm7_target' => 0,
+                        'm8_target' => 0,
+                        'm9_target' => 0,
+                        'm10_target' => 0,
+                        'm11_target' => 0,
+                        'm12_target' => 0,
+                    ]);
+                }
+            }
+        }
+        if ($indicatorsToCreate->isEmpty()) {
+            return back()->with('status', "All performance indicators are already initialized for {$operatingUnit->name} in FY {$targetYear}.");
+        }
+        // 5. Create fresh draft plans
+        $now = now();
+        $records = $indicatorsToCreate->map(function ($item) use ($ouId, $targetYear, $now) {
+            return array_merge($item, [
+                'operating_unit_id' => $ouId,
+                'year' => $targetYear,
+                'status' => 'draft',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        })->all();
+        Bed2Plan::insert($records);
+        // 6. Record Audit Log
+        try {
+            AuditLog::record(
+                action: 'bed2.rollover',
+                auditable: $operatingUnit,
+                newValues: [
+                    'year' => $targetYear,
+                    'source_year' => $sourcePlans->isNotEmpty() ? $sourceYear : 'catalog',
+                    'count' => count($records),
+                ],
+                request: $request
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
+        $sourceLabel = $sourcePlans->isNotEmpty() ? "FY {$sourceYear}" : "the Active Bureau Catalog";
+        return back()->with('status', "Successfully initialized " . count($records) . " indicator target rows for {$operatingUnit->name} (FY {$targetYear}) from {$sourceLabel}!");
+    }
+    public function batchSubmitHead(Request $request): RedirectResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        $validated = $request->validate([
+            'year' => ['required', 'integer'],
+            'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
+        ]);
+        $year = (int) $validated['year'];
+        $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin','admin','evaluator']);
+        $ouId = ($isPrivileged && ! empty($validated['operating_unit_id'])) ? (int) $validated ['operating_unit_id'] : $currentUser->operating_unit_id;
+        $plans = Bed2Plan::where('operating_unit_id', $ouId)
+        ->where('year', $year)
+        ->whereIn('status', ['draft','returned'])
+        ->get();
+        if ($plans->isEmpty()){
             return back()->with('error', 'No draft or returned plans found for submission.');
         }
-
         $unbalancedPlans = $plans->filter(fn (Bed2Plan $p) => ! $p->isBalanced());
-
-        if ($unbalancedPlans->isNotEmpty()) {
+        if ($unbalancedPlans->isNotEmpty()){
             $unbalancedCount = $unbalancedPlans->count();
             return back()->with('error', "Cannot submit plans: {$unbalancedCount} plan(s) are unbalanced. All monthly milestone allocations must balance with their annual target before submission.");
         }
-
-        foreach ($plans as $plan) {
+        foreach ($plans as $plan){
             $plan->update([
                 'status' => 'submitted_to_head',
                 'submitted_by' => $currentUser->id,
             ]);
         }
-
         try {
             AuditLog::record(
                 action: 'bed2.batch_submitted_to_head',
@@ -557,12 +652,10 @@ class Bed2PlanController extends Controller
                 request: $request
             );
         } catch (Throwable $e) {
-            report($e);
+            report ($e);
         }
-
         return back()->with('status', "{$plans->count()} target indicators successfully submitted to Division Chief for review.");
     }
-
     /**
      * Batch endorse all submitted plans for an Operating Unit & Year to PMO.
      */
@@ -574,40 +667,31 @@ class Bed2PlanController extends Controller
         if (! $currentUser->can('bed2.head_endorse') && ! $currentUser->hasAnyRole(['superadmin', 'admin', 'ou-head'])) {
             abort(403, 'Unauthorized to endorse target plans to PMO.');
         }
-
         $validated = $request->validate([
             'year' => ['nullable', 'integer'],
             'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
             'plan_ids' => ['nullable', 'array'],
             'plan_ids.*' => ['integer', 'exists:bed2_plans,id'],
         ]);
-
         $year = ! empty($validated['year']) ? (int) $validated['year'] : null;
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin']);
         $ouId = ($isPrivileged && ! empty($validated['operating_unit_id']))
             ? (int) $validated['operating_unit_id']
             : $currentUser->operating_unit_id;
-
         $query = Bed2Plan::where('status', 'submitted_to_head');
-
         if ($ouId) {
             $query->where('operating_unit_id', $ouId);
         }
-
         if ($year) {
             $query->where('year', $year);
         }
-
         if (! empty($validated['plan_ids'])) {
             $query->whereIn('id', $validated['plan_ids']);
         }
-
         $plans = $query->get();
-
         if ($plans->isEmpty()) {
             return back()->with('error', 'No plans pending division review found to endorse.');
         }
-
         $unbalancedPlans = $plans->filter(fn (Bed2Plan $p) => ! $p->isBalanced());
         if ($unbalancedPlans->isNotEmpty()) {
             return back()->with('error', "Cannot endorse plans to PMO: {$unbalancedPlans->count()} plan(s) are unbalanced.");

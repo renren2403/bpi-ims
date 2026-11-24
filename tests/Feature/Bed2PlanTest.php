@@ -398,4 +398,30 @@ class Bed2PlanTest extends TestCase
         $plan->refresh();
         $this->assertSame('submitted_to_head', $plan->status);
     }
+
+    public function test_encoder_can_rollover_and_initialize_start_of_year_target_plans(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $pap = PAP::factory()->create();
+        $indicator = PerformanceIndicator::factory()->create([
+            'pap_id' => $pap->id,
+            'is_active' => true,
+        ]);
+
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.rollover'), [
+            'year' => 2027,
+            'operating_unit_id' => $unit->id,
+        ]);
+
+        $response->assertSessionHas('status');
+        $this->assertDatabaseHas('bed2_plans', [
+            'operating_unit_id' => $unit->id,
+            'performance_indicator_id' => $indicator->id,
+            'year' => 2027,
+            'status' => 'draft',
+            'annual_target' => 0,
+        ]);
+    }
 }
