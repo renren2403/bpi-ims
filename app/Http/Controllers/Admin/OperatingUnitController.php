@@ -174,6 +174,7 @@ class OperatingUnitController extends Controller
 
     private function authorizeAccess(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user || (! $user->can('operating_units.manage') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
             abort(403, 'Unauthorized access to Operating Units management.');

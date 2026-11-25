@@ -424,4 +424,167 @@ class Bed2PlanTest extends TestCase
             'annual_target' => 0,
         ]);
     }
+
+    public function test_encoder_can_batch_create_multiple_target_plans_at_once(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $pap = PAP::factory()->create();
+        $ind1 = PerformanceIndicator::factory()->create(['pap_id' => $pap->id]);
+        $ind2 = PerformanceIndicator::factory()->create(['pap_id' => $pap->id]);
+
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.store'), [
+            'year' => 2026,
+            'plans' => [
+                [
+                    'pap_id' => $pap->id,
+                    'performance_indicator_id' => $ind1->id,
+                    'annual_target' => 120,
+                    'm1_target' => 10,
+                    'm2_target' => 10,
+                    'm3_target' => 10,
+                    'm4_target' => 10,
+                    'm5_target' => 10,
+                    'm6_target' => 10,
+                    'm7_target' => 10,
+                    'm8_target' => 10,
+                    'm9_target' => 10,
+                    'm10_target' => 10,
+                    'm11_target' => 10,
+                    'm12_target' => 10,
+                ],
+                [
+                    'pap_id' => $pap->id,
+                    'performance_indicator_id' => $ind2->id,
+                    'annual_target' => 40,
+                    'm1_target' => 0,
+                    'm2_target' => 0,
+                    'm3_target' => 10,
+                    'm4_target' => 0,
+                    'm5_target' => 0,
+                    'm6_target' => 10,
+                    'm7_target' => 0,
+                    'm8_target' => 0,
+                    'm9_target' => 10,
+                    'm10_target' => 0,
+                    'm11_target' => 0,
+                    'm12_target' => 10,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHas('status');
+        $this->assertDatabaseHas('bed2_plans', [
+            'operating_unit_id' => $unit->id,
+            'performance_indicator_id' => $ind1->id,
+            'year' => 2026,
+            'annual_target' => 120,
+            'q1_target' => 30,
+            'status' => 'draft',
+        ]);
+        $this->assertDatabaseHas('bed2_plans', [
+            'operating_unit_id' => $unit->id,
+            'performance_indicator_id' => $ind2->id,
+            'year' => 2026,
+            'annual_target' => 40,
+            'q1_target' => 10,
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_encoder_can_encode_plans_with_hierarchy_fields_and_inline_indicators(): void
+    {
+        $unit = OperatingUnit::factory()->create(['name' => 'National Plant Quarantine Services Division', 'code' => 'NPQSD']);
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $pap = PAP::factory()->create([
+            'code' => 'AFRSP',
+            'name' => 'Agriculture and Fishery Regulatory Support Program',
+            'category' => 'III. OPERATIONS',
+        ]);
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.store'), [
+            'year' => 2026,
+            'plans' => [
+                [
+                    'pap_id' => $pap->id,
+                    'sub_program' => 'Quality control and inspection and issuance of regulatory documents',
+                    'activity' => 'Issuance of Biosafety Permit',
+                    'sub_activity' => '1. Receive and conduct of initial technical assessment of the application received prior to endorsement to Joint Assessment Group',
+                    'indicator_name' => '6 GM applications assessed for sufficiency in substance and endorsement of communication letter',
+                    'unit_of_measure' => 'Applications',
+                    'annual_target' => 6,
+                    'm1_target' => 0,
+                    'm2_target' => 0,
+                    'm3_target' => 0,
+                    'm4_target' => 0,
+                    'm5_target' => 0,
+                    'm6_target' => 1,
+                    'm7_target' => 1,
+                    'm8_target' => 1,
+                    'm9_target' => 1,
+                    'm10_target' => 1,
+                    'm11_target' => 1,
+                    'm12_target' => 0,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHas('status');
+
+        $this->assertDatabaseHas('performance_indicators', [
+            'pap_id' => $pap->id,
+            'sub_program' => 'Quality control and inspection and issuance of regulatory documents',
+            'activity' => 'Issuance of Biosafety Permit',
+            'sub_activity' => '1. Receive and conduct of initial technical assessment of the application received prior to endorsement to Joint Assessment Group',
+            'name' => '6 GM applications assessed for sufficiency in substance and endorsement of communication letter',
+            'unit_of_measure' => 'Applications',
+        ]);
+
+        $this->assertDatabaseHas('bed2_plans', [
+            'operating_unit_id' => $unit->id,
+            'pap_id' => $pap->id,
+            'year' => 2026,
+            'annual_target' => 6,
+            'q1_target' => 0,
+            'q2_target' => 1,
+            'q3_target' => 3,
+            'q4_target' => 2,
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_encoder_can_delete_draft_plan_via_ajax(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+        $plan = Bed2Plan::factory()->create([
+            'operating_unit_id' => $unit->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->actingAs($encoder)->deleteJson(route('bed2-plans.destroy', $plan));
+
+        $response->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertDatabaseMissing('bed2_plans', ['id' => $plan->id]);
+    }
+
+    public function test_encoder_can_batch_delete_draft_plans(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+        $plan1 = Bed2Plan::factory()->create(['operating_unit_id' => $unit->id, 'status' => 'draft']);
+        $plan2 = Bed2Plan::factory()->create(['operating_unit_id' => $unit->id, 'status' => 'draft']);
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.batch-destroy'), [
+            'plan_ids' => [$plan1->id, $plan2->id],
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('bed2_plans', ['id' => $plan1->id]);
+        $this->assertDatabaseMissing('bed2_plans', ['id' => $plan2->id]);
+    }
 }

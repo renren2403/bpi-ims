@@ -225,9 +225,6 @@ class DashboardController extends Controller
             'totalAnnualTarget'
         ));
     }
-    /**
-     * Executive Leadership / Higher-Up Briefing Desk.
-     */
     public function executive(Request $request): View
     {
         $activeCycle = $this->getActiveCycle();
@@ -271,9 +268,6 @@ class DashboardController extends Controller
             'pendingApprovalCount'
         ));
     }
-    /**
-     * Helper to retrieve currently active reporting period or nearest open period.
-     */
     private function getActiveCycle(): ?ReportingPeriod
     {
         return ReportingPeriod::where('is_active', true)

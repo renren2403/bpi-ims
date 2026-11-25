@@ -69,6 +69,7 @@ class AuditLogController extends Controller
 
     private function authorizeAccess(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user || (! $user->can('audit_logs.view') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
             abort(403, 'Unauthorized access to Audit Logs.');

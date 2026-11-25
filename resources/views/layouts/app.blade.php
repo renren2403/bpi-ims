@@ -41,6 +41,28 @@
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
+
+        /* Permanently visible, accessible scrollbars across Windows and all browsers */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 6px;
+            border: 3px solid #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #059669;
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+        }
     </style>
 </head>
 
@@ -532,6 +554,121 @@
         }
         setInterval(updatePST, 1000);
         updatePST();
+    </script>
+
+    <!-- Universal Tooltip for Truncated Texts & Items with Tooltips -->
+    <script>
+        (function() {
+            let tooltipEl = null;
+            let tooltipTimer = null;
+            let activeTarget = null;
+
+            function getOrCreateTooltip() {
+                if (!tooltipEl) {
+                    tooltipEl = document.createElement('div');
+                    tooltipEl.id = 'app-floating-tooltip';
+                    tooltipEl.className = 'fixed hidden z-[9999] px-2.5 py-1.5 text-xs font-semibold text-white bg-slate-900/95 backdrop-blur-sm rounded-lg shadow-2xl border border-slate-700/80 pointer-events-none transition-opacity duration-150 max-w-sm whitespace-normal leading-snug break-words';
+                    document.body.appendChild(tooltipEl);
+                }
+                return tooltipEl;
+            }
+
+            function isTruncated(el) {
+                return (el.scrollWidth > el.clientWidth + 1) || (el.scrollHeight > el.clientHeight + 1);
+            }
+
+            function findTooltipTarget(target) {
+                if (!target || target === document.body || target === document.documentElement) return null;
+
+                // Priority 1: Explicit data-tooltip
+                const dataTooltipEl = target.closest('[data-tooltip]');
+                if (dataTooltipEl && dataTooltipEl.getAttribute('data-tooltip')?.trim()) {
+                    return { el: dataTooltipEl, text: dataTooltipEl.getAttribute('data-tooltip').trim() };
+                }
+
+                // Priority 2: Truncated elements (.truncate, line-clamp)
+                const truncateEl = target.closest('.truncate, [class*="line-clamp"], [style*="text-overflow: ellipsis"]');
+                if (truncateEl) {
+                    const text = truncateEl.getAttribute('title') || truncateEl.getAttribute('data-orig-title') || truncateEl.innerText.trim();
+                    if (text && isTruncated(truncateEl)) {
+                        return { el: truncateEl, text: text };
+                    }
+                }
+
+                // Priority 3: Elements with native title
+                const titleEl = target.closest('[title]');
+                if (titleEl && titleEl.getAttribute('title')?.trim()) {
+                    return { el: titleEl, text: titleEl.getAttribute('title').trim() };
+                }
+
+                return null;
+            }
+
+            document.addEventListener('mouseover', function(e) {
+                const info = findTooltipTarget(e.target);
+                if (!info || !info.text) return;
+
+                activeTarget = info.el;
+                const text = info.text;
+
+                // Temporarily stash title to prevent double-tooltip with native browser tooltip
+                if (activeTarget.hasAttribute('title')) {
+                    activeTarget.setAttribute('data-orig-title', activeTarget.getAttribute('title'));
+                    activeTarget.removeAttribute('title');
+                }
+
+                clearTimeout(tooltipTimer);
+                tooltipTimer = setTimeout(() => {
+                    if (activeTarget !== info.el) return;
+                    const tip = getOrCreateTooltip();
+                    tip.textContent = text;
+                    tip.classList.remove('hidden');
+                    tip.style.opacity = '1';
+
+                    const rect = activeTarget.getBoundingClientRect();
+                    const tipRect = tip.getBoundingClientRect();
+
+                    let top = rect.top - tipRect.height - 8;
+                    let left = rect.left + (rect.width - tipRect.width) / 2;
+
+                    // If overflows top of viewport, flip below
+                    if (top < 8) {
+                        top = rect.bottom + 8;
+                    }
+                    // Keep horizontally within viewport
+                    if (left < 8) left = 8;
+                    if (left + tipRect.width > window.innerWidth - 8) {
+                        left = window.innerWidth - tipRect.width - 8;
+                    }
+
+                    tip.style.top = `${top}px`;
+                    tip.style.left = `${left}px`;
+                }, 150);
+            });
+
+            function hideTooltip() {
+                clearTimeout(tooltipTimer);
+                if (activeTarget) {
+                    if (activeTarget.hasAttribute('data-orig-title')) {
+                        activeTarget.setAttribute('title', activeTarget.getAttribute('data-orig-title'));
+                        activeTarget.removeAttribute('data-orig-title');
+                    }
+                    activeTarget = null;
+                }
+                if (tooltipEl) {
+                    tooltipEl.classList.add('hidden');
+                    tooltipEl.style.opacity = '0';
+                }
+            }
+
+            document.addEventListener('mouseout', function(e) {
+                if (activeTarget && (!activeTarget.contains(e.relatedTarget))) {
+                    hideTooltip();
+                }
+            });
+
+            window.addEventListener('scroll', hideTooltip, true);
+        })();
     </script>
 </body>
 

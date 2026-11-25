@@ -315,7 +315,7 @@
                 @endif
 
                 <!-- 2. Actions for Division Chief (OU Head) -->
-                @if ($bed2Plan->status === 'submitted_to_head' && (auth()->user()->hasRole('ou-head') || auth()->user()->hasAnyRole(['superadmin', 'admin'])))
+                @if ($bed2Plan->status === 'submitted_to_head' && ((auth()->user()->hasRole('ou-head') && auth()->user()->operating_unit_id === $bed2Plan->operating_unit_id) || auth()->user()->hasAnyRole(['superadmin', 'admin'])))
                     <form method="POST" action="{{ route('bed2-plans.head-approve', $bed2Plan) }}" class="inline">
                         @csrf
                         <button type="submit"

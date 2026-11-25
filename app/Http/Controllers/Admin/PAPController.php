@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\PAP;
 use App\Models\PerformanceIndicator;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -222,6 +223,7 @@ class PAPController extends Controller
      */
     public function quickStore(Request $request): JsonResponse
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user) {
             abort(401);
@@ -279,6 +281,7 @@ class PAPController extends Controller
 
     private function authorizeAccess(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user || (! $user->can('paps.view') && ! $user->can('paps.create') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
             abort(403, 'Unauthorized access to Programs and PAPs.');

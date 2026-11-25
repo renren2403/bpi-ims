@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReportingPeriod;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -187,6 +188,7 @@ class ReportingPeriodController extends Controller
 
     private function authorizeAccess(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user || (! $user->can('reporting_periods.manage') && ! $user->hasAnyRole(['superadmin', 'admin', 'evaluator']))) {
             abort(403, 'Unauthorized access to Reporting Periods management.');

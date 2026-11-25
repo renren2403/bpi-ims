@@ -15,9 +15,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 class Bed2PlanController extends Controller
 {
-    /**
-     * Display a listing of BED-2 target plans with matrix filters.
-     */
     public function index(Request $request): View
     {
         /** @var User $currentUser */
@@ -43,99 +40,222 @@ class Bed2PlanController extends Controller
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
-        // PAP filter
         if ($papId = $request->input('pap_id')) {
             $query->where('pap_id', $papId);
         }
-        // Search query (indicator name or code)
         if ($search = $request->input('search')) {
             $query->whereHas('performanceIndicator', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%");
             });
         }
-
         $plans = $query->orderBy('operating_unit_id')
             ->orderBy('pap_id')
             ->paginate(15)
             ->withQueryString();
-
-        // Metrics for dashboard tabs
         $metricsQuery = Bed2Plan::where('year', $year);
         if (! $currentUser->can('bed2.manage_all_units') && ! $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'higher-up'])) {
             $metricsQuery->where('operating_unit_id', $currentUser->operating_unit_id);
         } elseif ($ouId = $request->input('operating_unit_id')) {
             $metricsQuery->where('operating_unit_id', $ouId);
         }
-
         $metrics = [
             'total' => (clone $metricsQuery)->count(),
-            'approved' => (clone $metricsQuery)->where('status', 'approved')->count(),
+            'approved' => (clone $metricsQuery)->where('status', 'approved')->count(),  
             'pending_head' => (clone $metricsQuery)->where('status', 'submitted_to_head')->count(),
             'pending_pmo' => (clone $metricsQuery)->where('status', 'head_approved')->count(),
             'draft' => (clone $metricsQuery)->where('status', 'draft')->count(),
             'returned' => (clone $metricsQuery)->where('status', 'returned')->count(),
         ];
-
         $operatingUnits = OperatingUnit::coveredForReporting()->where('is_active', true)->orderBy('name')->get();
         $paps = PAP::where('is_active', true)->orderBy('code')->get();
-
         $availableYears = Bed2Plan::select('year')
             ->distinct()
             ->orderByDesc('year')
             ->pluck('year')
             ->all();
-
         if (empty($availableYears)) {
             $availableYears = [(int) date('Y'), (int) date('Y') + 1];
         } elseif (! in_array((int) date('Y'), $availableYears, true)) {
             $availableYears[] = (int) date('Y');
             rsort($availableYears);
         }
-
         return view('bed2-plans.index', compact('plans', 'metrics', 'operatingUnits', 'paps', 'year', 'availableYears'));
     }
-
-    /**
-     * Show the form for creating a new BED-2 plan.
-     */
     public function create(Request $request): View
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
-        // Admin/evaluators and users with manage_all_units see all units; encoders/heads see assigned unit
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator']);
-
-        if ($isPrivileged) {
-            $operatingUnits = OperatingUnit::coveredForReporting()->where('is_active', true)->orderBy('name')->get();
+        if ($isPrivileged) { $operatingUnits = OperatingUnit::coveredForReporting()->where('is_active', true)->orderBy('name')->get();
             $defaultOuId = $request->input('operating_unit_id', $operatingUnits->first()?->id);
-        } else {
-            $operatingUnits = OperatingUnit::where('id', $currentUser->operating_unit_id)->get();
-            $defaultOuId = $currentUser->operating_unit_id;
+        } else { $operatingUnits = OperatingUnit::where('id', $currentUser->operating_unit_id)->get();
+         $defaultOuId = $currentUser->operating_unit_id;
         }
-
         $paps = PAP::with(['performanceIndicators' => function ($q) {
             $q->where('is_active', true)->orderBy('code');
         }])->where('is_active', true)->orderBy('code')->get();
-
         $year = (int) $request->input('year', date('Y'));
-        $categories = PAP::CATEGORIES;
-
-        return view('bed2-plans.create', compact('operatingUnits', 'paps', 'defaultOuId', 'year', 'categories'));
+        $categories = PAP::distinct()
+            ->whereNotNull('category')
+            ->pluck('category')
+            ->merge(PAP::CATEGORIES)
+            ->unique()
+            ->filter()
+            ->values()
+            ->all();
+        $existingPlans = Bed2Plan::with('performanceIndicator')
+            ->where('operating_unit_id', $defaultOuId)
+            ->where('year', $year)
+            ->get()
+            ->keyBy('performance_indicator_id');
+        $existingIndicatorIds = $existingPlans->keys()->all();
+        return view('bed2-plans.create', compact('operatingUnits', 'paps', 'defaultOuId', 'year', 'categories', 'existingPlans', 'existingIndicatorIds'));
     }
-
-    /**
-     * Store a newly created BED-2 plan in storage.
-     */
     public function store(Request $request): RedirectResponse
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator']);
         $ouId = $isPrivileged ? $request->input('operating_unit_id') : $currentUser->operating_unit_id;
+        // 1. Batch Multi-Plan Creation (Smart Spreadsheet Grid)
+        if ($request->has('plans') && is_array($request->input('plans'))) {
+            $validated = $request->validate([
+                'operating_unit_id' => [
+                    $isPrivileged ? 'required' : 'nullable',
+                    'exists:operating_units,id',
+                ],
+                'year' => ['required', 'integer', 'min:2020', 'max:2050'],
+                'plans' => ['required', 'array', 'min:1'],
+                'plans.*.pap_id' => ['required', 'exists:paps,id'],
+                'plans.*.performance_indicator_id' => ['nullable'],
+                'plans.*.indicator_code' => ['nullable', 'string', 'max:50'],
+                'plans.*.sub_program' => ['nullable', 'string', 'max:500'],
+                'plans.*.activity' => ['nullable', 'string', 'max:500'],
+                'plans.*.sub_activity' => ['nullable', 'string', 'max:1000'],
+                'plans.*.indicator_name' => ['nullable', 'string', 'max:1000'],
+                'plans.*.unit_of_measure' => ['nullable', 'string', 'max:100'],
+                'plans.*.indicator_type' => ['nullable', 'in:output,outcome'],
+                'plans.*.annual_target' => ['required', 'numeric', 'min:0'],
+                'plans.*.m1_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m2_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m3_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m4_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m5_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m6_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m7_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m8_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m9_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m10_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m11_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.m12_target' => ['nullable', 'numeric', 'min:0'],
+                'plans.*.remarks' => ['nullable', 'string', 'max:1000'],
+            ]);
+            $targetYear = (int) $validated['year'];
+            $createdCount = 0;
+            foreach ($validated['plans'] as $planData) {
+                // Resolve or create Performance Indicator
+                $indId = $planData['performance_indicator_id'] ?? null;
+                if (! $indId) {
+                    $pap = PAP::find($planData['pap_id']);
+                    $indCode = ! empty($planData['indicator_code'])
+                        ? strtoupper(trim($planData['indicator_code']))
+                        : ($pap ? $pap->code.'-IND-'.(PerformanceIndicator::where('pap_id', $pap->id)->count() + 1) : 'IND-'.uniqid());
+                    $indicator = PerformanceIndicator::create([
+                        'pap_id' => $planData['pap_id'],
+                        'sub_program' => $planData['sub_program'] ?? null,
+                        'activity' => $planData['activity'] ?? null,
+                        'sub_activity' => $planData['sub_activity'] ?? null,
+                        'code' => $indCode,
+                        'name' => trim($planData['indicator_name'] ?? 'Key Indicator'),
+                        'unit_of_measure' => trim($planData['unit_of_measure'] ?? 'Units'),
+                        'type' => $planData['indicator_type'] ?? 'output',
+                        'is_active' => true,
+                    ]);
+                    $indId = $indicator->id;
+                } else {
+                    $indicator = PerformanceIndicator::find($indId);
+                    if ($indicator) {
+                        $indUpdates = [];
+                        if (array_key_exists('sub_program', $planData)) {
+                            $indUpdates['sub_program'] = $planData['sub_program'] ? trim($planData['sub_program']) : null;
+                        }
+                        if (array_key_exists('activity', $planData)) {
+                            $indUpdates['activity'] = $planData['activity'] ? trim($planData['activity']) : null;
+                        }
+                        if (array_key_exists('sub_activity', $planData)) {
+                            $indUpdates['sub_activity'] = $planData['sub_activity'] ? trim($planData['sub_activity']) : null;
+                        }
+                        if (! empty($planData['indicator_name'])) {
+                            $indUpdates['name'] = trim($planData['indicator_name']);
+                        }
+                        if (! empty($planData['unit_of_measure'])) {
+                            $indUpdates['unit_of_measure'] = trim($planData['unit_of_measure']);
+                        }
+                        if (! empty($indUpdates)) {
+                            $indicator->update($indUpdates);
+                        }
+                    }
+                }
+                $mTargets = [];
+                for ($i = 1; $i <= 12; $i++) {
+                    $mTargets["m{$i}_target"] = (float) ($planData["m{$i}_target"] ?? 0);
+                }
+                $q1 = $mTargets['m1_target'] + $mTargets['m2_target'] + $mTargets['m3_target'];
+                $q2 = $mTargets['m4_target'] + $mTargets['m5_target'] + $mTargets['m6_target'];
+                $q3 = $mTargets['m7_target'] + $mTargets['m8_target'] + $mTargets['m9_target'];
+                $q4 = $mTargets['m10_target'] + $mTargets['m11_target'] + $mTargets['m12_target'];
+                $plan = Bed2Plan::updateOrCreate(
+                    [
+                        'operating_unit_id' => $ouId,
+                        'performance_indicator_id' => $indId,
+                        'year' => $targetYear,
+                    ],
+                    [
+                        'pap_id' => $planData['pap_id'],
+                        'annual_target' => (float) $planData['annual_target'],
+                        'q1_target' => $q1,
+                        'q2_target' => $q2,
+                        'q3_target' => $q3,
+                        'q4_target' => $q4,
+                        'm1_target' => $mTargets['m1_target'],
+                        'm2_target' => $mTargets['m2_target'],
+                        'm3_target' => $mTargets['m3_target'],
+                        'm4_target' => $mTargets['m4_target'],
+                        'm5_target' => $mTargets['m5_target'],
+                        'm6_target' => $mTargets['m6_target'],
+                        'm7_target' => $mTargets['m7_target'],
+                        'm8_target' => $mTargets['m8_target'],
+                        'm9_target' => $mTargets['m9_target'],
+                        'm10_target' => $mTargets['m10_target'],
+                        'm11_target' => $mTargets['m11_target'],
+                        'm12_target' => $mTargets['m12_target'],
+                        'remarks' => $planData['remarks'] ?? null,
+                        'status' => 'draft',
+                        'submitted_by' => $currentUser->id,
+                    ]
+                );
 
+                $createdCount++;
+            }
+            try {
+                AuditLog::record(
+                    action: 'bed2.batch_created',
+                    auditable: OperatingUnit::find($ouId),
+                    newValues: [
+                        'count' => $createdCount,
+                        'year' => $targetYear,
+                        'operating_unit_id' => $ouId,
+                    ],
+                    request: $request
+                );
+            } catch (Throwable $e) {
+                report($e);
+            }
+            return redirect()->route('bed2-plans.index', ['year' => $targetYear, 'operating_unit_id' => $ouId])
+                ->with('status', "Successfully encoded {$createdCount} target plan(s) in Draft status!");
+        }
+        // 2. Single Plan Creation (Legacy / Fallback)
         $validated = $request->validate([
             'operating_unit_id' => [
                 $isPrivileged ? 'required' : 'nullable',
@@ -168,18 +288,15 @@ class Bed2PlanController extends Controller
         ], [
             'performance_indicator_id.unique' => 'A BED-2 plan for this Performance Indicator and Operating Unit already exists for the selected year.',
         ]);
-
         $mTargets = [];
         for ($i = 1; $i <= 12; $i++) {
             $mTargets["m{$i}_target"] = (float) ($validated["m{$i}_target"] ?? 0);
         }
-
         // Calculate Quarterly Targets
         $q1 = $mTargets['m1_target'] + $mTargets['m2_target'] + $mTargets['m3_target'];
         $q2 = $mTargets['m4_target'] + $mTargets['m5_target'] + $mTargets['m6_target'];
         $q3 = $mTargets['m7_target'] + $mTargets['m8_target'] + $mTargets['m9_target'];
         $q4 = $mTargets['m10_target'] + $mTargets['m11_target'] + $mTargets['m12_target'];
-
         $plan = Bed2Plan::create(array_merge($validated, $mTargets, [
             'operating_unit_id' => $ouId,
             'q1_target' => $q1,
@@ -189,7 +306,6 @@ class Bed2PlanController extends Controller
             'status' => 'draft',
             'submitted_by' => $currentUser->id,
         ]));
-
         try {
             AuditLog::record(
                 action: 'bed2.created',
@@ -205,18 +321,15 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return redirect()->route('bed2-plans.show', $plan)
             ->with('status', 'BED-2 Target Plan created successfully in Draft status.');
     }
-
     /**
      * Display the specified BED-2 plan dossier.
      */
     public function show(Bed2Plan $bed2Plan): View
     {
         $this->authorizeView($bed2Plan);
-
         $bed2Plan->load([
             'operatingUnit',
             'pap',
@@ -225,29 +338,23 @@ class Bed2PlanController extends Controller
             'headApprovedBy',
             'pmoApprovedBy',
         ]);
-
         return view('bed2-plans.show', compact('bed2Plan'));
     }
-
     /**
      * Show the form for editing the specified BED-2 plan.
      */
     public function edit(Bed2Plan $bed2Plan): View
     {
         $this->authorizeEdit($bed2Plan);
-
         $bed2Plan->load(['operatingUnit', 'pap', 'performanceIndicator']);
-
         return view('bed2-plans.edit', compact('bed2Plan'));
     }
-
     /**
      * Update the specified BED-2 plan in storage.
      */
     public function update(Request $request, Bed2Plan $bed2Plan): RedirectResponse
     {
         $this->authorizeEdit($bed2Plan);
-
         $validated = $request->validate([
             'annual_target' => ['required', 'numeric', 'min:0'],
             'm1_target' => ['nullable', 'numeric', 'min:0'],
@@ -264,7 +371,6 @@ class Bed2PlanController extends Controller
             'm12_target' => ['nullable', 'numeric', 'min:0'],
             'remarks' => ['nullable', 'string', 'max:1000'],
         ]);
-
         $oldValues = [
             'annual_target' => $bed2Plan->annual_target,
             'q1_target' => $bed2Plan->q1_target,
@@ -272,24 +378,20 @@ class Bed2PlanController extends Controller
             'q3_target' => $bed2Plan->q3_target,
             'q4_target' => $bed2Plan->q4_target,
         ];
-
         $mTargets = [];
         for ($i = 1; $i <= 12; $i++) {
-            $mTargets["m{$i}_target"] = (float) ($validated["m{$i}_target"] ?? 0);
+           $mTargets["m{$i}_target"] = (float) ($validated["m{$i}_target"] ?? 0);
         }
-
         $q1 = $mTargets['m1_target'] + $mTargets['m2_target'] + $mTargets['m3_target'];
         $q2 = $mTargets['m4_target'] + $mTargets['m5_target'] + $mTargets['m6_target'];
         $q3 = $mTargets['m7_target'] + $mTargets['m8_target'] + $mTargets['m9_target'];
         $q4 = $mTargets['m10_target'] + $mTargets['m11_target'] + $mTargets['m12_target'];
-
         $bed2Plan->update(array_merge($validated, $mTargets, [
             'q1_target' => $q1,
             'q2_target' => $q2,
             'q3_target' => $q3,
             'q4_target' => $q4,
         ]));
-
         try {
             AuditLog::record(
                 action: 'bed2.updated',
@@ -307,22 +409,22 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return redirect()->route('bed2-plans.show', $bed2Plan)
             ->with('status', 'BED-2 Target Plan updated successfully.');
     }
-
     /**
      * Remove the specified BED-2 plan from storage.
      */
-    public function destroy(Bed2Plan $bed2Plan): RedirectResponse
+    public function destroy(Bed2Plan $bed2Plan): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorizeEdit($bed2Plan);
 
         if (! in_array($bed2Plan->status, ['draft', 'returned'])) {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['error' => 'Only draft or returned plans can be deleted.'], 422);
+            }
             return back()->with('error', 'Only draft or returned plans can be deleted.');
         }
-
         try {
             AuditLog::record(
                 action: 'bed2.deleted',
@@ -337,24 +439,56 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         $bed2Plan->delete();
-
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'BED-2 Target Plan deleted.']);
+        }
         return redirect()->route('bed2-plans.index')
             ->with('status', 'BED-2 Target Plan deleted.');
     }
-
     /**
-     * Submit a draft plan to Division Chief for review.
+     * Batch delete draft or returned plans.
      */
+    public function batchDestroy(Request $request): RedirectResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        $validated = $request->validate([
+            'plan_ids' => ['required', 'array'],
+            'plan_ids.*' => ['integer', 'exists:bed2_plans,id'],
+        ]);
+        $plans = Bed2Plan::whereIn('id', $validated['plan_ids'])->get();
+        $deletedCount = 0;
+        foreach ($plans as $plan) {
+            $isOwner = $plan->operating_unit_id === $currentUser->operating_unit_id;
+            $isPmo = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator']);
+            if (($isOwner || $isPmo) && in_array($plan->status, ['draft', 'returned'])) {
+                try {
+                    AuditLog::record(
+                        action: 'bed2.deleted',
+                        auditable: $plan,
+                        oldValues: [
+                            'operating_unit_id' => $plan->operating_unit_id,
+                            'performance_indicator_id' => $plan->performance_indicator_id,
+                            'year' => $plan->year,
+                        ],
+                        request: $request
+                    );
+                } catch (Throwable $e) {
+                    report($e);
+                }
+                $plan->delete();
+                $deletedCount++;
+            }
+        }
+        return back()->with('status', "{$deletedCount} BED-2 target plan row(s) deleted successfully.");
+    }
     public function submitToHead(Bed2Plan $bed2Plan): RedirectResponse
     {
         $this->authorizeEdit($bed2Plan);
-
         if (! in_array($bed2Plan->status, ['draft', 'returned'])) {
             return back()->with('error', 'Only draft or returned plans can be submitted to the Division Chief.');
         }
-
         if (! $bed2Plan->isBalanced()) {
             $variance = $bed2Plan->balanceVariance();
             $detail = $variance > 0
@@ -363,12 +497,10 @@ class Bed2PlanController extends Controller
 
             return back()->with('error', "Cannot submit plan: Monthly targets do not balance with the annual commitment ({$detail}). Please edit targets so monthly totals equal annual target.");
         }
-
         $bed2Plan->update([
             'status' => 'submitted_to_head',
             'submitted_by' => Auth::id(),
         ]);
-
         try {
             AuditLog::record(
                 action: 'bed2.submitted_to_head',
@@ -379,10 +511,8 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return back()->with('status', 'Target plan submitted to Division Chief for endorsement.');
     }
-
     /**
      * Division Chief endorses plan to PMO.
      */
@@ -425,10 +555,6 @@ class Bed2PlanController extends Controller
 
         return back()->with('status', 'Target plan endorsed and forwarded to PMO for final validation.');
     }
-
-    /**
-     * Return plan for revision (by OU Head or PMO).
-     */
     public function returnPlan(Request $request, Bed2Plan $bed2Plan): RedirectResponse
     {
         /** @var User $currentUser */
@@ -439,12 +565,10 @@ class Bed2PlanController extends Controller
         ]);
 
         $stage = $currentUser->hasRole('ou-head') ? 'Division Chief' : 'PMO';
-
         $bed2Plan->update([
             'status' => 'returned',
             'remarks' => "Returned by {$stage}: {$validated['remarks']}",
         ]);
-
         try {
             AuditLog::record(
                 action: 'bed2.returned',
@@ -455,26 +579,18 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return back()->with('status', "Target plan returned to Encoder for revision.");
     }
-
-    /**
-     * PMO Administrator validates and locks the baseline.
-     */
     public function pmoApprove(Bed2Plan $bed2Plan): RedirectResponse
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         if (! $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator'])) {
             abort(403, 'Only PMO Administrators or Evaluators can approve and lock baseline targets.');
         }
-
         if (! in_array($bed2Plan->status, ['head_approved', 'submitted_to_head'])) {
             return back()->with('error', 'Plan is not in a valid stage for PMO approval.');
         }
-
         if (! $bed2Plan->isBalanced()) {
             return back()->with('error', 'Cannot approve baseline: Target allocation is unbalanced.');
         }
@@ -508,7 +624,6 @@ class Bed2PlanController extends Controller
         $targetYear = (int) $validated['year'];
         $sourceYear = (int) ($validated['source_year'] ?? ($targetYear - 1));
         $copyTargets = $request->boolean('copy_targets', false);
-        // 2. Identify the target Operating Unit (Respects role permissions)
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator']);
         $ouId = ($isPrivileged && ! empty($validated['operating_unit_id']))
             ? (int) $validated['operating_unit_id']
@@ -703,7 +818,6 @@ class Bed2PlanController extends Controller
                 'head_approved_by' => $currentUser->id,
             ]);
         }
-
         try {
             AuditLog::record(
                 action: 'bed2.batch_head_approved',
@@ -714,10 +828,8 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return back()->with('status', "{$plans->count()} target indicators endorsed and forwarded to PMO for final validation.");
     }
-
     /**
      * Batch approve and lock all plans for an Operating Unit & Year (by PMO).
      */
@@ -725,40 +837,32 @@ class Bed2PlanController extends Controller
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         if (! $currentUser->can('bed2.pmo_approve') && ! $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator'])) {
             abort(403, 'Only PMO Administrators or Evaluators can approve and lock baseline targets.');
         }
-
         $validated = $request->validate([
             'year' => ['required', 'integer'],
             'operating_unit_id' => ['required', 'exists:operating_units,id'],
         ]);
-
         $year = (int) $validated['year'];
         $ouId = (int) $validated['operating_unit_id'];
-
         $plans = Bed2Plan::where('operating_unit_id', $ouId)
             ->where('year', $year)
             ->whereIn('status', ['head_approved', 'submitted_to_head', 'draft'])
             ->get();
-
         if ($plans->isEmpty()) {
             return back()->with('error', 'No active plans found to approve for this operating unit.');
         }
-
         $unbalancedPlans = $plans->filter(fn (Bed2Plan $p) => ! $p->isBalanced());
         if ($unbalancedPlans->isNotEmpty()) {
             return back()->with('error', "Cannot approve baselines: {$unbalancedPlans->count()} plan(s) are unbalanced.");
         }
-
         foreach ($plans as $plan) {
             $plan->update([
                 'status' => 'approved',
                 'pmo_approved_by' => $currentUser->id,
             ]);
         }
-
         try {
             AuditLog::record(
                 action: 'bed2.batch_pmo_approved',
@@ -769,10 +873,8 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return back()->with('status', "Annual target baseline for FY {$year} locked! {$plans->count()} indicators officially approved.");
     }
-
     /**
      * Batch return plans for revision (by OU Head or PMO).
      */
@@ -780,11 +882,9 @@ class Bed2PlanController extends Controller
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         if (! $currentUser->can('bed2.return') && ! $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'ou-head'])) {
             abort(403, 'Unauthorized to return target plans.');
         }
-
         $validated = $request->validate([
             'year' => ['nullable', 'integer'],
             'operating_unit_id' => ['nullable', 'exists:operating_units,id'],
@@ -792,43 +892,33 @@ class Bed2PlanController extends Controller
             'plan_ids' => ['nullable', 'array'],
             'plan_ids.*' => ['integer', 'exists:bed2_plans,id'],
         ]);
-
         $year = ! empty($validated['year']) ? (int) $validated['year'] : null;
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator']);
         $ouId = ($isPrivileged && ! empty($validated['operating_unit_id']))
             ? (int) $validated['operating_unit_id']
             : $currentUser->operating_unit_id;
-
         $stage = $currentUser->hasRole('ou-head') ? 'Division Chief' : 'PMO';
         $remarks = "Returned by {$stage}: {$validated['remarks']}";
-
         $query = Bed2Plan::whereIn('status', ['submitted_to_head', 'head_approved']);
-
         if ($ouId) {
             $query->where('operating_unit_id', $ouId);
         }
-
         if ($year) {
             $query->where('year', $year);
         }
-
         if (! empty($validated['plan_ids'])) {
             $query->whereIn('id', $validated['plan_ids']);
         }
-
         $plans = $query->get();
-
         if ($plans->isEmpty()) {
             return back()->with('error', 'No pending plans found to return for this operating unit.');
         }
-
         foreach ($plans as $plan) {
             $plan->update([
                 'status' => 'returned',
                 'remarks' => $remarks,
             ]);
         }
-
         try {
             AuditLog::record(
                 action: 'bed2.batch_returned',
@@ -839,10 +929,8 @@ class Bed2PlanController extends Controller
         } catch (Throwable $e) {
             report($e);
         }
-
         return back()->with('status', "{$plans->count()} target plan(s) returned for revision.");
     }
-
     /**
      * Display printable official DBM BED Form No. 2 (Physical Plan).
      */
@@ -850,10 +938,8 @@ class Bed2PlanController extends Controller
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         $year = (int) $request->input('year', date('Y'));
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'higher-up']);
-
         if ($isPrivileged && $request->filled('operating_unit_id')) {
             $operatingUnit = OperatingUnit::findOrFail($request->input('operating_unit_id'));
         } elseif ($currentUser->operating_unit_id && strtoupper($currentUser->operatingUnit?->code ?? '') !== 'PMO') {
@@ -861,26 +947,20 @@ class Bed2PlanController extends Controller
         } else {
             $operatingUnit = OperatingUnit::coveredForReporting()->where('is_active', true)->firstOrFail();
         }
-
         $operatingUnit->load(['divisionChief', 'reportingOfficer']);
-
         $plans = Bed2Plan::with(['pap', 'performanceIndicator', 'submittedBy', 'headApprovedBy', 'pmoApprovedBy'])
             ->where('operating_unit_id', $operatingUnit->id)
             ->where('year', $year)
             ->get();
-
         // Group plans by PAP
         $plansByPap = $plans->groupBy('pap_id');
-
         $overallAnnual = $plans->sum('annual_target');
         $overallQ1 = $plans->sum('q1_target');
         $overallQ2 = $plans->sum('q2_target');
         $overallQ3 = $plans->sum('q3_target');
         $overallQ4 = $plans->sum('q4_target');
-
         // Extract latest signatory records if available
         $latestApprovedPlan = $plans->firstWhere('status', 'approved') ?? $plans->first();
-
         return view('bed2-plans.print', [
             'operatingUnit' => $operatingUnit,
             'year' => $year,
@@ -894,18 +974,12 @@ class Bed2PlanController extends Controller
             'latestApprovedPlan' => $latestApprovedPlan,
         ]);
     }
-
-    /**
-     * Export DBM BED-2 Physical Plan targets as CSV/Excel.
-     */
     public function exportCsv(Request $request): StreamedResponse
     {
         /** @var User $currentUser */
         $currentUser = Auth::user();
-
         $year = (int) $request->input('year', date('Y'));
         $isPrivileged = $currentUser->can('bed2.manage_all_units') || $currentUser->hasAnyRole(['superadmin', 'admin', 'evaluator', 'higher-up']);
-
         if ($isPrivileged && $request->filled('operating_unit_id')) {
             $operatingUnit = OperatingUnit::findOrFail($request->input('operating_unit_id'));
         } elseif ($currentUser->operating_unit_id && strtoupper($currentUser->operatingUnit?->code ?? '') !== 'PMO') {
@@ -913,15 +987,12 @@ class Bed2PlanController extends Controller
         } else {
             $operatingUnit = OperatingUnit::coveredForReporting()->where('is_active', true)->firstOrFail();
         }
-
         $plans = Bed2Plan::with(['pap', 'performanceIndicator'])
             ->where('operating_unit_id', $operatingUnit->id)
             ->where('year', $year)
             ->orderBy('pap_id')
             ->get();
-
         $filename = "BED-2_Physical_Plan_{$operatingUnit->code}_{$year}.csv";
-
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
@@ -929,12 +1000,10 @@ class Bed2PlanController extends Controller
             'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
             'Expires' => '0',
         ];
-
         $callback = function () use ($plans, $operatingUnit, $year) {
             $file = fopen('php://output', 'w');
             // UTF-8 BOM for Excel compatibility
             fputs($file, "\xEF\xBB\xBF");
-
             // Header information
             fputcsv($file, ['DBM BED FORM NO. 2 - PHYSICAL PLAN']);
             fputcsv($file, ['Department:', 'Department of Agriculture (DA)']);
@@ -942,13 +1011,16 @@ class Bed2PlanController extends Controller
             fputcsv($file, ['Operating Unit:', "{$operatingUnit->name} ({$operatingUnit->code})"]);
             fputcsv($file, ['Fiscal Year:', $year]);
             fputcsv($file, []);
-
             // Column Headers
             fputcsv($file, [
+                'Category Banner',
                 'Program / PAP Code',
                 'Program / PAP Name',
+                'Sub-Program / Component',
+                'Activity',
+                'Specific Activity / Process Step',
                 'Indicator Code',
-                'Performance Indicator',
+                'Key Performance Indicator',
                 'Type',
                 'Unit of Measure',
                 'Jan',
@@ -971,11 +1043,14 @@ class Bed2PlanController extends Controller
                 'Status',
                 'Remarks',
             ]);
-
             foreach ($plans as $plan) {
                 fputcsv($file, [
+                    $plan->pap?->category ?? 'Operations',
                     $plan->pap?->code,
                     $plan->pap?->name,
+                    $plan->performanceIndicator?->sub_program,
+                    $plan->performanceIndicator?->activity,
+                    $plan->performanceIndicator?->sub_activity,
                     $plan->performanceIndicator?->code,
                     $plan->performanceIndicator?->name,
                     strtoupper($plan->performanceIndicator?->type ?? 'OUTPUT'),
@@ -1001,41 +1076,32 @@ class Bed2PlanController extends Controller
                     $plan->remarks,
                 ]);
             }
-
             fclose($file);
         };
-
         return response()->stream($callback, 200, $headers);
     }
-
     private function authorizeView(Bed2Plan $bed2Plan): void
     {
         /** @var User $user */
         $user = Auth::user();
-
         if ($user->can('bed2.manage_all_units') || $user->hasAnyRole(['superadmin', 'admin', 'evaluator', 'higher-up'])) {
             return;
         }
-
         if ($bed2Plan->operating_unit_id !== $user->operating_unit_id) {
             abort(403, 'Unauthorized access to another Operating Unit target plan.');
         }
     }
-
     private function authorizeEdit(Bed2Plan $bed2Plan): void
     {
         /** @var User $user */
         $user = Auth::user();
-
         // PMO and users with manage_all_units or admin can edit anytime (even submitted or approved)
         if ($user->can('bed2.manage_all_units') || $user->hasAnyRole(['superadmin', 'admin', 'evaluator'])) {
             return;
         }
-
         if (! $bed2Plan->isEditable()) {
             abort(403, 'This plan is locked in review or has been approved, and cannot be modified.');
         }
-
         if ($bed2Plan->operating_unit_id !== $user->operating_unit_id) {
             abort(403, 'Unauthorized modification to another Operating Unit target plan.');
         }

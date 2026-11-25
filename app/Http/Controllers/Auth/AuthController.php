@@ -29,7 +29,10 @@ class AuthController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return $this->redirectUserByRole(Auth::user());
+            /** @var User $user */
+            $user = Auth::user();
+
+            return $this->redirectUserByRole($user);
         }
 
         return view('auth.login');
@@ -87,7 +90,10 @@ class AuthController extends Controller
     public function showRegisterForm()
     {
         if (Auth::check()) {
-            return $this->redirectUserByRole(Auth::user());
+            /** @var User $user */
+            $user = Auth::user();
+
+            return $this->redirectUserByRole($user);
         }
 
         $operatingUnits = OperatingUnit::where('is_active', true)->orderBy('name')->get();
@@ -227,6 +233,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if ($user) {
             try {
@@ -240,40 +247,33 @@ class AuthController extends Controller
                 report($e);
             }
         }
-
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect()->route('login')->with('status', 'You have been logged out.');
     }
-
-    public function redirectUserByRole($user)
+    /**
+     * @param  User  $user
+     */
+    public function redirectUserByRole(User $user): RedirectResponse
     {
         if ($user->hasAnyRole(['superadmin', 'admin'])) {
             return redirect()->intended(route('admin.dashboard'));
         }
-
         if ($user->hasRole('evaluator')) {
             return redirect()->intended(route('evaluator.dashboard'));
         }
-
         if ($user->hasRole('ou-head')) {
             return redirect()->intended(route('head.dashboard'));
         }
-
         if ($user->hasRole('encoder')) {
             return redirect()->intended(route('encoder.dashboard'));
         }
-
         if ($user->hasRole('higher-up')) {
             return redirect()->intended(route('executive.dashboard'));
         }
-
         return redirect()->intended(route('profile.show'));
     }
-
     /**
      * Show the forgot-password request form.
      */
@@ -281,7 +281,6 @@ class AuthController extends Controller
     {
         return view('auth.forgot-password');
     }
-
     /**
      * Send a password reset link to an active, approved user.
      */
@@ -290,23 +289,18 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'email'],
         ]);
-
         $user = User::where('email', $validated['email'])->first();
-
         if ($user && ($accessError = $this->accountAccessError($user))) {
             return back()->withErrors([
                 'email' => $accessError,
             ])->onlyInput('email');
         }
-
         $status = PasswordBroker::sendResetLink($validated);
-
         return $status === PasswordBroker::RESET_LINK_SENT
             ? back()->with('status', __($status))
             : back()->withInput($request->only('email'))
                 ->withErrors(['email' => __($status)]);
     }
-
     /**
      * Show the password reset form for a valid token.
      */
@@ -317,7 +311,6 @@ class AuthController extends Controller
             'email' => $request->query('email'),
         ]);
     }
-
     /**
      * Complete a password reset request using a valid reset token.
      */
@@ -328,27 +321,21 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
-
         $user = User::where('email', $request->input('email'))->first();
-
         if ($user && ($accessError = $this->accountAccessError($user))) {
             return back()->withInput($request->only('email'))
                 ->withErrors(['email' => $accessError]);
         }
-
         $status = PasswordBroker::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password): void {
                 $user->forceFill([
                     'password' => Hash::make($password),
                 ])->setRememberToken(Str::random(60));
-
                 $user->save();
-
                 event(new PasswordReset($user));
             }
         );
-
         if ($status === PasswordBroker::PASSWORD_RESET) {
             if ($user) {
                 try {
@@ -357,14 +344,11 @@ class AuthController extends Controller
                     report($e);
                 }
             }
-
             return redirect()->route('login')->with('status', __($status));
         }
-
         return back()->withInput($request->only('email'))
             ->withErrors(['email' => __($status)]);
     }
-
     /**
      * Return an access denial message if the user account cannot sign in or reset its password.
      */
@@ -373,15 +357,12 @@ class AuthController extends Controller
         if ($user->isPendingApproval()) {
             return 'Your account request is currently pending verification and approval by the PMO Administrator.';
         }
-
         if ($user->isRejected()) {
             return 'Your account registration request was declined. Please contact the PMO for assistance.';
         }
-
         if (! $user->is_active) {
             return 'Your account has been deactivated. Please contact the PMO for access.';
         }
-
         return null;
     }
 }

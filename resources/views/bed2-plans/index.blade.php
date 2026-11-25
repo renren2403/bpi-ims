@@ -8,8 +8,8 @@
             /** @var \App\Models\User $user */
             $user = auth()->user();
             $isPmo = $user->can('bed2.manage_all_units') || $user->hasAnyRole(['superadmin', 'admin', 'evaluator']);
-            $isEncoder = $user->hasRole('encoder') || $user->can('bed2.submit_head');
-            $isHead = $user->hasRole('ou-head') || $user->can('bed2.head_endorse');
+            $isEncoder = !$isPmo && ($user->hasRole('encoder') || $user->can('bed2.submit_head'));
+            $isHead = !$isPmo && ($user->hasRole('ou-head') || $user->can('bed2.head_endorse'));
             $selectedOuId = request('operating_unit_id') ?: ($isPmo ? null : $user->operating_unit_id);
             $selectedOu = $selectedOuId ? $operatingUnits->firstWhere('id', $selectedOuId) : null;
         @endphp
@@ -126,7 +126,8 @@
                         <span>CSV</span>
                     </a>
                 </div>
-                @if ($user->can('bed2.create') || $user->hasAnyRole(['superadmin', 'admin', 'evaluator', 'encoder']))
+                {{-- Rollover / Baseline Initialization: PMO & Administrative Governance Only --}}
+                @if ($isPmo)
                     <button type="button" onclick="openRolloverModal()"
                         class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5"
                         title="Initialize indicators for FY {{ $year }} from previous year or active catalog">
@@ -286,7 +287,7 @@
 
         <!-- BED-2 Plans Matrix Table -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto sheet-scroll-container">
                 <table class="w-full text-left text-xs">
                     <thead
                         class="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase tracking-wider font-extrabold">
@@ -318,10 +319,18 @@
                                     : 'OPERATIONS';
 
                                 $indicatorFullName = $plan->performanceIndicator?->name ?? 'Indicator';
+                                $subProgram = trim($plan->performanceIndicator?->sub_program ?? '');
+                                $activity = trim($plan->performanceIndicator?->activity ?? '');
+                                $subActivity = trim($plan->performanceIndicator?->sub_activity ?? '');
+
                                 $subHeader = null;
                                 $displayName = $indicatorFullName;
 
-                                if (str_contains($indicatorFullName, ':')) {
+                                if (!empty($activity)) {
+                                    $subHeader = (!empty($subProgram) ? $subProgram . ' › ' : '') . $activity;
+                                } elseif (!empty($subProgram)) {
+                                    $subHeader = $subProgram;
+                                } elseif (str_contains($indicatorFullName, ':')) {
                                     [$prefix, $rest] = explode(':', $indicatorFullName, 2);
                                     $subHeader = trim($prefix);
                                     $displayName = trim($rest);
@@ -385,9 +394,18 @@
                                             {{ $plan->performanceIndicator?->type }}
                                         </span>
                                     </div>
-                                    <p class="font-bold text-slate-900 leading-snug">
-                                        {{ $displayName }}
-                                    </p>
+                                    @if ($subActivity)
+                                        <p class="font-extrabold text-slate-900 text-xs leading-snug">
+                                            {{ $subActivity }}
+                                        </p>
+                                        <p class="text-[11px] text-slate-600 leading-snug mt-1">
+                                            <span class="font-bold text-slate-400 text-[10px] uppercase">Key Indicator:</span> {{ $displayName }}
+                                        </p>
+                                    @else
+                                        <p class="font-bold text-slate-900 leading-snug">
+                                            {{ $displayName }}
+                                        </p>
+                                    @endif
                                     <p class="text-[10px] text-slate-400 font-mono mt-0.5">
                                         {{ $plan->performanceIndicator?->code }}
                                     </p>
@@ -486,6 +504,21 @@
                                             </a>
                                         @endif
                                     @endif
+
+                                    <!-- Delete Plan (Draft or Returned) -->
+                                    @if (in_array($plan->status, ['draft', 'returned']) && ($isPmo || $plan->operating_unit_id === auth()->user()->operating_unit_id))
+                                        <form method="POST" action="{{ route('bed2-plans.destroy', $plan) }}" class="inline"
+                                            onsubmit="return confirm('Are you sure you want to delete this target plan row?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 font-bold text-[11px] border border-rose-200 transition inline-flex items-center gap-1"
+                                                title="Delete this target plan row">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                <span>Delete</span>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -558,7 +591,8 @@
         }
     </script>
 
-    <!-- Rollover / Start-of-Year Initialization Modal -->
+    @if ($isPmo)
+    <!-- Rollover / Start-of-Year Initialization Modal (PMO Only) -->
     <div id="rolloverModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -572,24 +606,19 @@
             <form method="POST" action="{{ route('bed2-plans.rollover') }}" class="space-y-4 text-xs">
                 @csrf
                 <input type="hidden" name="year" value="{{ $year }}">
-                @if (!$isPmo)
-                    <input type="hidden" name="operating_unit_id" value="{{ $user->operating_unit_id }}">
-                @endif
 
                 <p class="text-slate-600 leading-relaxed">
-                    This will automatically populate all recurring indicators for <span class="font-bold text-slate-900">{{ $selectedOu?->name ?? 'your unit' }}</span> in <span class="font-extrabold text-emerald-800">FY {{ $year }}</span> as fresh draft rows ready for target encoding.
+                    This will automatically populate all recurring indicators for the selected operating unit in <span class="font-extrabold text-emerald-800">FY {{ $year }}</span> as fresh draft rows ready for target encoding.
                 </p>
 
-                @if ($isPmo)
-                    <div>
-                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Operating Unit <span class="text-rose-500">*</span></label>
-                        <select name="operating_unit_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 font-semibold text-xs">
-                            @foreach ($operatingUnits as $ou)
-                                <option value="{{ $ou->id }}" {{ $selectedOuId == $ou->id ? 'selected' : '' }}>{{ $ou->name }} ({{ $ou->code }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1.5">Operating Unit <span class="text-rose-500">*</span></label>
+                    <select name="operating_unit_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 font-semibold text-xs">
+                        @foreach ($operatingUnits as $ou)
+                            <option value="{{ $ou->id }}" {{ $selectedOuId == $ou->id ? 'selected' : '' }}>{{ $ou->name }} ({{ $ou->code }})</option>
+                        @endforeach
+                    </select>
+                </div>
 
                 <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
                     <div class="flex items-center justify-between">
@@ -616,6 +645,7 @@
             </form>
         </div>
     </div>
+    @endif
     <script>
         function openRolloverModal() {
             document.getElementById('rolloverModal').classList.remove('hidden');

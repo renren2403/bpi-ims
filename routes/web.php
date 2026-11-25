@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/bed2-plans/batch-head-approve', [Bed2PlanController::class, 'batchHeadApprove'])->name('bed2-plans.batch-head-approve');
     Route::post('/bed2-plans/batch-pmo-approve', [Bed2PlanController::class, 'batchPmoApprove'])->name('bed2-plans.batch-pmo-approve');
     Route::post('/bed2-plans/batch-return', [Bed2PlanController::class, 'batchReturn'])->name('bed2-plans.batch-return');
+    Route::post('/bed2-plans/batch-destroy', [Bed2PlanController::class, 'batchDestroy'])->name('bed2-plans.batch-destroy');
     Route::post('/bed2-plans/{bed2Plan}/submit-head', [Bed2PlanController::class, 'submitToHead'])->name('bed2-plans.submit-head');
     Route::post('/bed2-plans/{bed2Plan}/head-approve', [Bed2PlanController::class, 'headApprove'])->name('bed2-plans.head-approve');
     Route::post('/bed2-plans/{bed2Plan}/return', [Bed2PlanController::class, 'returnPlan'])->name('bed2-plans.return');

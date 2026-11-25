@@ -202,26 +202,39 @@
                     @if ($currentCategory !== $categoryTitle)
                         @php $currentCategory = $categoryTitle; @endphp
                         <tr class="bg-slate-800 text-white font-black text-xs uppercase tracking-wider">
-                            <td colspan="19" class="p-2.5 border border-slate-900">
+                            <td class="p-2 border border-slate-900 font-black">
                                 {{ $categoryTitle }}
                             </td>
+                            @for ($c = 1; $c <= 18; $c++)
+                                <td class="border border-slate-700 bg-slate-800"></td>
+                            @endfor
                         </tr>
                     @endif
                     <!-- 2. Program / PAP Banner (e.g. PEST MANAGEMENT) -->
                     <tr class="bg-emerald-50/70 font-extrabold text-emerald-950 border-t border-b border-emerald-200">
-                        <td colspan="19" class="p-2 border border-slate-300 uppercase tracking-wide text-[11px]">
+                        <td class="p-2 border border-slate-300 uppercase tracking-wide text-[11px]">
                             <span class="font-mono text-emerald-800">{{ $pap?->code }}</span> &mdash;
                             {{ $pap?->name }}
                         </td>
+                        @for ($c = 1; $c <= 18; $c++)
+                            <td class="border border-slate-300 bg-emerald-50/40"></td>
+                        @endfor
                     </tr>
                     @foreach ($group as $plan)
                         @php
                             $indicatorFullName = $plan->performanceIndicator?->name ?? 'Indicator';
+                            $subProgram = trim($plan->performanceIndicator?->sub_program ?? '');
+                            $activity = trim($plan->performanceIndicator?->activity ?? '');
+                            $subActivity = trim($plan->performanceIndicator?->sub_activity ?? '');
+
                             $subHeader = null;
                             $displayName = $indicatorFullName;
 
-                            // Check if indicator name has a sub-group prefix (e.g., "Beneficiaries: Group" or "Clients Served: Private")
-                            if (str_contains($indicatorFullName, ':')) {
+                            if (!empty($activity)) {
+                                $subHeader = (!empty($subProgram) ? $subProgram . ' › ' : '') . $activity;
+                            } elseif (!empty($subProgram)) {
+                                $subHeader = $subProgram;
+                            } elseif (str_contains($indicatorFullName, ':')) {
                                 [$prefix, $rest] = explode(':', $indicatorFullName, 2);
                                 $subHeader = trim($prefix);
                                 $displayName = trim($rest);
@@ -232,9 +245,12 @@
                         @if ($subHeader && $subHeader !== $lastSubHeader)
                             @php $lastSubHeader = $subHeader; @endphp
                             <tr class="bg-slate-100/80 font-bold border-b border-slate-200 text-slate-800">
-                                <td colspan="19" class="p-1.5 pl-6 border border-slate-300 italic text-[10px]">
+                                <td class="p-1.5 pl-6 border border-slate-300 italic text-[10px]">
                                     {{ $subHeader }}
                                 </td>
+                                @for ($c = 1; $c <= 18; $c++)
+                                    <td class="border border-slate-300 bg-slate-50"></td>
+                                @endfor
                             </tr>
                         @elseif (!$subHeader)
                             @php $lastSubHeader = null; @endphp
@@ -243,8 +259,13 @@
                             <!-- Indicator Column (Indented if part of a sub-group) -->
                             <td
                                 class="p-2 border border-slate-300 {{ $subHeader ? 'pl-9 text-slate-700' : 'pl-5 text-slate-900 font-bold' }}">
-                                <div>{{ $displayName }}</div>
-                                <div class="text-[9px] font-mono text-slate-400">
+                                @if ($subActivity)
+                                    <div class="font-bold text-slate-900 text-[10px] leading-tight">{{ $subActivity }}</div>
+                                    <div class="text-[9px] text-slate-600 mt-0.5 leading-tight"><span class="font-semibold text-slate-500">Key Indicator:</span> {{ $displayName }}</div>
+                                @else
+                                    <div>{{ $displayName }}</div>
+                                @endif
+                                <div class="text-[8px] font-mono text-slate-400 mt-0.5">
                                     {{ $plan->performanceIndicator?->code }} &bull;
                                     {{ strtoupper($plan->performanceIndicator?->type ?? 'OUTPUT') }}
                                 </div>

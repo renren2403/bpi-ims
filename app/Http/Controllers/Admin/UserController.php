@@ -463,6 +463,7 @@ class UserController extends Controller
 
     private function authorizeView(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user || (! $user->can('users.view') && ! $user->can('users.manage') && ! $user->hasAnyRole(['superadmin', 'admin']))) {
             abort(403, 'Unauthorized access to User Management.');
@@ -471,6 +472,7 @@ class UserController extends Controller
 
     private function authorizeManage(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (! $user || (! $user->can('users.manage') && ! $user->hasAnyRole(['superadmin', 'admin']))) {
             abort(403, 'Unauthorized to manage users.');

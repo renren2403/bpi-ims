@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -248,6 +249,7 @@ class RolePermissionController extends Controller
      */
     private function authorizeAccess(): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user || (! $user->can('roles.manage') && ! $user->hasAnyRole(['superadmin', 'admin']))) {

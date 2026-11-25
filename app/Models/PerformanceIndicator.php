@@ -8,7 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class PerformanceIndicator extends Model
 {
     use HasFactory;
-    protected $fillable = ['pap_id', 'code', 'name', 'unit_of_measure', 'type', 'is_active'];
+    protected $fillable = [
+        'pap_id',
+        'sub_program',
+        'activity',
+        'sub_activity',
+        'code',
+        'name',
+        'unit_of_measure',
+        'type',
+        'is_active',
+    ];
 
     protected $casts = ['is_active' => 'boolean'];
 
