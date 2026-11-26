@@ -1,6 +1,6 @@
-<!--create.blade.php BED-2 Target Plan (Interactive Smart Sheet Editor)-->
+<!--create.blade.php BED-2 Target Plan (Spreadsheet Editor with Dedicated Hierarchy Rows)-->
 @extends('layouts.app')
-@section('title', 'BED-2 Physical Plan Smart Sheet Editor')
+@section('title', 'BED-2 Physical Plan Spreadsheet Editor')
 
 @section('content')
     <style>
@@ -18,93 +18,121 @@
             -moz-appearance: textfield !important;
         }
 
-        .auto-expand-textarea {
-            field-sizing: content;
-            min-height: 54px;
-            height: auto;
-            resize: none !important;
-            box-sizing: border-box;
-            line-height: 1.5;
-            padding: 8px 10px 18px 10px !important;
-            border: 0 !important;
-            outline: none !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            white-space: pre-wrap;
-            display: block;
-            width: 100%;
-        }
-
-        .auto-expand-textarea:focus,
-        .auto-expand-textarea:focus-visible,
-        .auto-expand-textarea:active {
-            outline: none !important;
-            box-shadow: none !important;
-            border: 0 !important;
-            border-color: transparent !important;
-            background-color: transparent !important;
-            --tw-ring-color: transparent !important;
-            --tw-ring-shadow: none !important;
-            --tw-ring-offset-shadow: none !important;
-            --tw-ring-inset: none !important;
-        }
-
         /* High-visibility, prominent vertical and horizontal scrollbars for BED-2 Smart Sheet */
         .sheet-scroll-container::-webkit-scrollbar {
             height: 12px;
             width: 12px;
         }
+
         .sheet-scroll-container::-webkit-scrollbar-track {
             background: #f1f5f9;
             border-radius: 6px;
         }
+
         .sheet-scroll-container::-webkit-scrollbar-thumb {
             background: #94a3b8;
             border-radius: 6px;
             border: 3px solid #f1f5f9;
         }
+
         .sheet-scroll-container::-webkit-scrollbar-thumb:hover {
             background: #059669;
         }
+
         .sheet-scroll-container {
             scrollbar-width: thin;
             scrollbar-color: #94a3b8 #f1f5f9;
         }
+
+        /* Autocomplete dropdown scrollbar */
+        .autocomplete-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        /* True Spreadsheet Cell Focus & In-Cell Input Styling */
+        .sheet-cell-input {
+            border: 0 !important;
+            outline: none !important;
+            background: transparent !important;
+            width: 100% !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+        }
+
+        input.sheet-cell-input {
+            height: 100% !important;
+        }
+
+        .sheet-cell-input:focus {
+            background: rgba(16, 185, 129, 0.08) !important;
+            box-shadow: inset 0 0 0 1.5px #10b981 !important;
+        }
+
+        .sheet-cell-input-amber:focus {
+            background: rgba(245, 158, 11, 0.1) !important;
+            box-shadow: inset 0 0 0 1.5px #f59e0b !important;
+        }
+
+        /* Auto-wrapping multi-line spreadsheet textarea cells */
+        .sheet-cell-textarea {
+            resize: none !important;
+            overflow: hidden !important;
+            white-space: pre-wrap !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            line-height: 1.4 !important;
+            min-height: 28px !important;
+            padding: 4px 6px !important;
+            display: block !important;
+            box-sizing: border-box !important;
+        }
     </style>
     <div class="space-y-4">
         <!-- Top Toolbar & Status Bar -->
-        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm">
-            <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+        <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-sm">
+            <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
                 <div>
                     <div class="flex items-center gap-2.5 flex-wrap">
-                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">BED-2 Physical Plan
-                            Worksheet</h2>
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                            BED-2 Physical Plan Worksheet
+                        </h2>
                         <span
                             class="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 uppercase tracking-wide">
                             FY {{ $year }}
                         </span>
                     </div>
+                    <div class="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
+                        <span class="font-extrabold text-slate-400 uppercase tracking-wider text-[10px]">Hierarchy Legend:</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-purple-50 text-purple-900 font-extrabold border-l-4 border-l-purple-600 shadow-2xs">
+                            Purple Border = Program / PAP
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-900 font-extrabold border-l-4 border-l-indigo-500 shadow-2xs">
+                            Indigo Border = Activity
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-50 text-amber-900 font-extrabold border-l-4 border-l-amber-500 shadow-2xs">
+                            Amber Border = Sub-activity
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-50 text-slate-700 font-bold border-l-4 border-l-slate-300 shadow-2xs">
+                            White Rows = Indicators &amp; Targets
+                        </span>
+                    </div>
                 </div>
-
                 <div class="flex items-center gap-2 flex-wrap">
-                    <button type="button" onclick="openNewCategoryPapModal()"
-                        class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20">
-                        <span class="text-white font-extrabold">+</span>
-                        <span>Add Program / PAP</span>
-                    </button>
                     <a href="{{ route('bed2-plans.index', ['year' => $year]) }}"
-                        class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition flex items-center gap-1.5">
+                        class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition flex items-center gap-1.5 shadow-xs">
                         <span>&larr;</span>
                         <span>Back to Matrix</span>
                     </a>
                 </div>
             </div>
-
             <!-- Jurisdiction Selector Bar -->
             <div
-                class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                class="mt-3 pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex items-center gap-1.5">
                         <span class="font-bold text-slate-500 uppercase tracking-wider text-[11px]">Operating Unit:</span>
@@ -126,7 +154,6 @@
                             </span>
                         @endif
                     </div>
-
                     <div class="flex items-center gap-1.5">
                         <span class="font-bold text-slate-500 uppercase tracking-wider text-[11px]">Fiscal Year:</span>
                         <input type="number" id="yearSelector" value="{{ $year }}" min="2020" max="2050"
@@ -134,12 +161,11 @@
                             class="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 font-bold text-slate-800 text-xs text-center focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
                     </div>
                 </div>
-
                 <!-- Live Matrix Summary Status -->
                 <div class="flex items-center gap-2">
                     <span id="matrixSummaryBadge"
                         class="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-[11px]">
-                        0 Total Target Plans
+                        0 Indicator Commitments
                     </span>
                     <button type="button" onclick="document.getElementById('smartSheetForm').requestSubmit()"
                         class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
@@ -149,7 +175,6 @@
                 </div>
             </div>
         </div>
-
         @if ($errors->any())
             <div
                 class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl space-y-1 shadow-sm">
@@ -161,886 +186,194 @@
                 </ul>
             </div>
         @endif
-
         <!-- The Smart Spreadsheet Form -->
         <form method="POST" action="{{ route('bed2-plans.store') }}" id="smartSheetForm" class="space-y-4">
             @csrf
             <input type="hidden" name="operating_unit_id" value="{{ $defaultOuId }}">
             <input type="hidden" name="year" value="{{ $year }}">
-
-            <!-- Table Container with Horizontal and Vertical Scrollbars -->
-            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-                <div id="tableScrollContainer" class="sheet-scroll-container overflow-x-auto overflow-y-auto max-h-[75vh]">
+            <!-- Table Container with Full Screen Height and Responsive Scrollbars -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-285px)] min-h-[440px]">
+                <div id="tableScrollContainer" class="sheet-scroll-container flex-1 overflow-x-auto overflow-y-auto relative">
                     <table class="w-full text-left text-xs border-collapse" id="smartSheetTable">
-                        <!-- Clean Executive Sticky Table Header -->
+                        <!-- Clean Sticky Table Header -->
                         <thead
                             class="sticky top-0 z-30 bg-slate-50 text-slate-600 text-[10px] font-extrabold uppercase tracking-wider border-b border-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.06)] select-none">
                             <tr>
                                 <th rowspan="2"
-                                    class="p-3 border-r border-slate-200 min-w-[340px] max-w-[440px] w-[380px] text-left bg-slate-50 text-slate-600">
+                                    class="p-3 border-r border-slate-200 min-w-[340px] max-w-[420px] w-[370px] text-left bg-slate-50 text-slate-700">
                                     PROGRAM / PROJECTS / ACTIVITIES
                                 </th>
                                 <th rowspan="2"
-                                    class="p-3 border-r border-slate-200 min-w-[320px] max-w-[420px] w-[360px] text-left bg-slate-50 text-slate-600">
+                                    class="p-3 border-r border-slate-200 min-w-[300px] max-w-[380px] w-[330px] text-left bg-slate-50 text-slate-700">
                                     KEY INDICATORS
                                 </th>
                                 <th rowspan="2"
-                                    class="p-2 border-r border-slate-200 min-w-[70px] w-[70px] text-center bg-slate-50 text-slate-600">
+                                    class="p-2 border-r border-slate-200 min-w-[70px] w-[70px] text-center bg-slate-50 text-slate-700">
                                     Unit
                                 </th>
                                 <th rowspan="2"
-                                    class="p-2 border-r border-amber-200/80 min-w-[100px] w-[100px] text-center bg-amber-50/90 text-amber-900 font-black">
+                                    class="p-2 border-r border-amber-200 min-w-[100px] w-[100px] text-center bg-amber-50/90 text-amber-900 font-black">
                                     Annual Target
                                 </th>
+                                <!-- Q1: Emerald / Mint -->
                                 <th colspan="4"
-                                    class="p-1.5 border-r border-slate-200 text-center bg-slate-100/80 font-extrabold text-slate-700">
+                                    class="p-1.5 border-r border-emerald-300 text-center bg-emerald-100 font-extrabold text-emerald-950 tracking-wide">
                                     1st Quarter
                                 </th>
+                                <!-- Q2: Sky / Cyan Blue -->
                                 <th colspan="4"
-                                    class="p-1.5 border-r border-slate-200 text-center bg-slate-100/80 font-extrabold text-slate-700">
+                                    class="p-1.5 border-r border-sky-300 text-center bg-sky-100 font-extrabold text-sky-950 tracking-wide">
                                     2nd Quarter
                                 </th>
+                                <!-- Q3: Warm Amber / Gold -->
                                 <th colspan="4"
-                                    class="p-1.5 border-r border-slate-200 text-center bg-slate-100/80 font-extrabold text-slate-700">
+                                    class="p-1.5 border-r border-amber-300 text-center bg-amber-100 font-extrabold text-amber-950 tracking-wide">
                                     3rd Quarter
                                 </th>
+                                <!-- Q4: Soft Purple / Violet -->
                                 <th colspan="4"
-                                    class="p-1.5 border-r border-slate-200 text-center bg-slate-100/80 font-extrabold text-slate-700">
+                                    class="p-1.5 border-r border-purple-300 text-center bg-purple-100 font-extrabold text-purple-950 tracking-wide">
                                     4th Quarter
                                 </th>
                                 <th rowspan="2"
-                                    class="p-2 border-r border-slate-200 min-w-[105px] w-[105px] text-center bg-slate-50 text-slate-600">
+                                    class="p-2 border-r border-slate-200 min-w-[100px] w-[100px] text-center bg-slate-50 text-slate-700">
                                     Balance
                                 </th>
-                                <th rowspan="2" class="p-2 text-center min-w-[120px] w-[120px] bg-slate-50 text-slate-600">
-                                    ⚡ Presets
+                                <th rowspan="2"
+                                    class="sticky right-0 top-0 z-40 p-2 text-center min-w-[210px] w-[210px] bg-slate-100 text-slate-800 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)] border-l border-slate-300">
+                                    ⚡ Action / Insert
                                 </th>
                             </tr>
                             <tr class="text-[9px] font-bold text-slate-500 bg-slate-100/60 border-t border-slate-200">
-                                <!-- Q1 -->
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Jan</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Feb</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Mar</th>
-                                <th
-                                    class="p-1 border-r border-slate-200 min-w-[74px] w-[74px] text-center bg-emerald-50/80 font-black text-emerald-800">
-                                    Q1</th>
-                                <!-- Q2 -->
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Apr</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">May</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Jun</th>
-                                <th
-                                    class="p-1 border-r border-slate-200 min-w-[74px] w-[74px] text-center bg-emerald-50/80 font-black text-emerald-800">
-                                    Q2</th>
-                                <!-- Q3 -->
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Jul</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Aug</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Sep</th>
-                                <th
-                                    class="p-1 border-r border-slate-200 min-w-[74px] w-[74px] text-center bg-emerald-50/80 font-black text-emerald-800">
-                                    Q3</th>
-                                <!-- Q4 -->
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Oct</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Nov</th>
-                                <th class="p-1 border-r border-slate-200 min-w-[68px] w-[68px] text-center">Dec</th>
-                                <th
-                                    class="p-1 border-r border-slate-200 min-w-[74px] w-[74px] text-center bg-emerald-50/80 font-black text-emerald-800">
-                                    Q4</th>
+                                <!-- Q1 (Mint / Emerald) -->
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-emerald-50/50 text-emerald-900">Jan</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-emerald-50/50 text-emerald-900">Feb</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-emerald-50/50 text-emerald-900">Mar</th>
+                                <th class="p-1 border-r border-emerald-300 min-w-[70px] w-[70px] text-center bg-emerald-200/90 font-black text-emerald-950">Q1</th>
+
+                                <!-- Q2 (Sky / Cyan) -->
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-sky-50/50 text-sky-900">Apr</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-sky-50/50 text-sky-900">May</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-sky-50/50 text-sky-900">Jun</th>
+                                <th class="p-1 border-r border-sky-300 min-w-[70px] w-[70px] text-center bg-sky-200/90 font-black text-sky-950">Q2</th>
+
+                                <!-- Q3 (Warm Amber) -->
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-amber-50/50 text-amber-900">Jul</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-amber-50/50 text-amber-900">Aug</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-amber-50/50 text-amber-900">Sep</th>
+                                <th class="p-1 border-r border-amber-300 min-w-[70px] w-[70px] text-center bg-amber-200/90 font-black text-amber-950">Q3</th>
+
+                                <!-- Q4 (Soft Purple) -->
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-purple-50/50 text-purple-900">Oct</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-purple-50/50 text-purple-900">Nov</th>
+                                <th class="p-1 border-r border-slate-200 min-w-[65px] w-[65px] text-center bg-purple-50/50 text-purple-900">Dec</th>
+                                <th class="p-1 border-r border-purple-300 min-w-[70px] w-[70px] text-center bg-purple-200/90 font-black text-purple-950">Q4</th>
                             </tr>
                         </thead>
-
                         <tbody class="divide-y divide-slate-200 bg-white" id="sheetTbody">
-                            @php
-                                $rowIndex = 0;
-                                $savedPapIds = $existingPlans->pluck('pap_id')->unique()->all();
-                                $papsWithPlans = $paps->whereIn('id', $savedPapIds);
-                                $papsByCategory = $papsWithPlans->groupBy(function ($pap) {
-                                    return !empty(trim($pap->category ?? ''))
-                                        ? strtoupper(trim($pap->category))
-                                        : 'OPERATIONS';
-                                });
-                            @endphp
+                            <!-- Populated dynamically via JavaScript with structural & indicator rows -->
+                        </tbody>
+                    </table>
+                </div>
 
-                            {{-- EMPTY BLANK OPENING PROMPT --}}
-                            @if ($papsByCategory->isEmpty())
-                                <tr id="emptySheetPromptRow">
-                                    <td colspan="22" class="p-12 text-center bg-slate-50/50">
-                                        <div class="max-w-md mx-auto space-y-4">
-                                            <div
-                                                class="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl shadow-sm border border-emerald-200">
-                                                📋
-                                            </div>
-                                            <div>
-                                                <h3 class="text-base font-black text-slate-900 tracking-tight">Your FY
-                                                    {{ $year }} Physical Plan is Blank</h3>
-                                                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                                                    No target plans have been added yet for
-                                                    {{ $operatingUnits->firstWhere('id', $defaultOuId)?->name ?? 'your unit' }}.
-                                                    Click below to add your division's Program (PAP) and start encoding.
-                                                </p>
-                                            </div>
-                                            <button type="button" onclick="openNewCategoryPapModal()"
-                                                class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/25 transition inline-flex items-center gap-2">
-                                                <span class="text-lg font-black leading-none">+</span>
-                                                <span>Add Program / PAP to Start</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @else
-                                {{-- Render ONLY the plans this OU has saved --}}
-                                @foreach ($papsByCategory as $categoryTitle => $groupedPaps)
-                                    <tr class="category-banner-row bg-slate-100/90 text-slate-800 font-extrabold text-xs uppercase tracking-wider border-y border-slate-200 select-none"
-                                        data-category="{{ $categoryTitle }}">
-                                        <!-- Col 1: Category Title -->
-                                        <td
-                                            class="p-2.5 px-4 border-r border-slate-200 border-l-4 border-l-emerald-600 bg-slate-100/90 text-slate-900 font-extrabold text-xs uppercase tracking-wider">
-                                            <div class="flex items-center gap-2">
-                                                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                                                <span>{{ $categoryTitle }}</span>
-                                            </div>
-                                        </td>
-                                        <!-- Col 2: Action Button -->
-                                        <td class="p-2 border-r border-slate-200 bg-slate-100/90">
-                                            <button type="button"
-                                                onclick="openNewCategoryPapModal('{{ addslashes($categoryTitle) }}')"
-                                                class="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-800 font-bold shadow-sm transition flex items-center gap-1">
-                                                <span class="text-emerald-600 font-extrabold">+</span>
-                                                <span>Add Program under {{ $categoryTitle }}</span>
-                                            </button>
-                                        </td>
-                                        <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                                        <td class="bg-slate-100/70"></td>
-                                    </tr>
+                <!-- Bottom Spreadsheet Action Bar -->
+                <div
+                    class="p-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button type="button" onclick="addProgramRow()"
+                            class="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5">
+                            <span>+ Add Program</span>
+                        </button>
+                        <button type="button" onclick="addActivityRow()"
+                            class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5">
+                            <span>+ Add Activity</span>
+                        </button>
+                        <button type="button" onclick="addSubactivityRow()"
+                            class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5">
+                            <span>+ Add Sub-activity</span>
+                        </button>
+                        <button type="button" onclick="addIndicatorRow()"
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-sm transition flex items-center gap-1.5">
+                            <span class="text-white font-extrabold text-sm leading-none">+</span>
+                            <span>Add Indicator Row</span>
+                        </button>
+                    </div>
 
-                                    @foreach ($groupedPaps as $pap)
-                                        <tr class="pap-banner-row bg-emerald-50/90 text-emerald-950 font-extrabold text-xs uppercase tracking-wide border-t border-b border-emerald-200 select-none"
-                                            data-pap-id="{{ $pap->id }}" data-pap-code="{{ $pap->code }}"
-                                            data-pap-name="{{ $pap->name }}">
-                                            <!-- Col 1: PAP Badge & Name -->
-                                            <td
-                                                class="p-2 px-3 border-r border-emerald-200 bg-emerald-50/90 text-emerald-950 font-extrabold text-xs uppercase tracking-wide">
-                                                <div class="flex items-start gap-2">
-                                                    <span
-                                                        class="font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 font-black text-[11px] shrink-0 mt-0.5">
-                                                        {{ $pap->code }}
-                                                    </span>
-                                                    <span class="font-extrabold text-emerald-950 text-xs leading-snug whitespace-normal break-words" title="{{ $pap->name }}">{{ $pap->name }}</span>
-                                                </div>
-                                            </td>
-                                            <!-- Col 2: Action Buttons -->
-                                            <td class="p-2 border-r border-emerald-200 bg-emerald-50/90">
-                                                <div class="flex items-center gap-1.5">
-                                                    <button type="button"
-                                                        onclick="addRowUnderPap({{ $pap->id }}, '{{ addslashes($pap->code) }}', '{{ addslashes($pap->name) }}')"
-                                                        class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] transition flex items-center gap-1 shadow-sm">
-                                                        + Add Indicator Row
-                                                    </button>
-                                                    <button type="button"
-                                                        onclick="openAddSubProgramModal({{ $pap->id }}, '{{ addslashes($pap->code) }}', '{{ addslashes($pap->name) }}')"
-                                                        class="px-2 py-0.5 rounded bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-extrabold text-[10px] transition">
-                                                        + Sub-Program
-                                                    </button>
-                                                    <button type="button"
-                                                        onclick="openAddActivityModal({{ $pap->id }}, '{{ addslashes($pap->code) }}', '{{ addslashes($pap->name) }}')"
-                                                        class="px-2 py-0.5 rounded bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-extrabold text-[10px] transition">
-                                                        + Activity
-                                                    </button>
-                                                </div>
-                                            </td>
-                                            <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                                            <td class="border-r border-emerald-200 bg-emerald-50/50"></td>
-                                            <td class="border-r border-emerald-300 bg-amber-50/30"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                                            <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                                            <td class="border-r border-emerald-200 bg-emerald-50/50"></td>
-                                            <td class="bg-emerald-50/50"></td>
-                                        </tr>
-
-                                        @php
-                                            $lastSubProgram = null;
-                                            $lastActivity = null;
-                                        @endphp
-
-                                        @foreach ($pap->performanceIndicators as $indicator)
-                                            @php
-                                                $plan = $existingPlans[$indicator->id] ?? null;
-                                                if (!$plan) {
-                                                    continue;
-                                                }
-                                                $annualTarget = (float) $plan->annual_target;
-                                                $subProg = trim($indicator->sub_program ?? '');
-                                                $act = trim($indicator->activity ?? '');
-                                                $subAct = trim($indicator->sub_activity ?? '');
-                                            @endphp
-
-                                            @if (!empty($subProg) && $subProg !== $lastSubProgram)
-                                                @php
-                                                    $lastSubProgram = $subProg;
-                                                    $lastActivity = null;
-                                                @endphp
-                                                <tr class="subprogram-row bg-slate-100 font-black text-slate-800 text-[11px] border-b border-slate-200"
-                                                    data-pap-id="{{ $pap->id }}"
-                                                    data-subprogram="{{ $subProg }}">
-                                                    <!-- Col 1: Sub-Program Title -->
-                                                    <td class="py-2 px-3 border-r border-slate-200 bg-slate-100">
-                                                        <span class="italic font-bold text-slate-800 whitespace-normal break-words leading-snug block"
-                                                            title="{{ $subProg }}">{{ $subProg }}</span>
-                                                    </td>
-                                                    <!-- Col 2: Action Button -->
-                                                    <td class="py-2 px-2 border-r border-slate-200 bg-slate-100">
-                                                        <div class="flex items-center justify-between gap-1">
-                                                            <div class="flex items-center gap-1.5">
-                                                                <button type="button"
-                                                                    onclick="addRowUnderPap({{ $pap->id }}, '{{ addslashes($pap->code) }}', '{{ addslashes($pap->name) }}', '{{ addslashes($subProg) }}')"
-                                                                    class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] transition flex items-center gap-1 shadow-sm">
-                                                                    + Add Indicator Row
-                                                                </button>
-                                                                <button type="button"
-                                                                    onclick="openAddActivityModal({{ $pap->id }}, '{{ addslashes($pap->code) }}', '{{ addslashes($pap->name) }}', '{{ addslashes($subProg) }}')"
-                                                                    class="text-[9px] font-bold text-slate-600 hover:text-emerald-700 px-2 py-0.5 rounded hover:bg-slate-200 transition">
-                                                                    + Activity
-                                                                </button>
-                                                            </div>
-                                                            <button type="button"
-                                                                onclick="removeHeaderRow(this, 'Sub-Program')"
-                                                                class="text-slate-400 hover:text-rose-600 font-bold text-sm px-1 leading-none"
-                                                                title="Remove Sub-Program Header">&times;</button>
-                                                        </div>
-                                                    </td>
-                                                    <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                                                    <td class="border-r border-slate-200 bg-slate-50"></td>
-                                                    <td class="border-r border-slate-300 bg-amber-50/20"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-200 bg-slate-50"></td>
-                                                    <td class="bg-slate-50"></td>
-                                                </tr>
-                                            @endif
-
-                                            @if (!empty($act) && $act !== $lastActivity)
-                                                @php $lastActivity = $act; @endphp
-                                                <tr class="activity-row bg-slate-50 font-extrabold text-slate-700 text-[11px] border-b border-slate-200"
-                                                    data-pap-id="{{ $pap->id }}"
-                                                    data-subprogram="{{ $subProg }}"
-                                                    data-activity="{{ $act }}">
-                                                    <!-- Col 1: Activity Title -->
-                                                    <td class="py-2 px-5 border-r border-slate-200 bg-slate-50">
-                                                        <span class="font-extrabold text-emerald-950 whitespace-normal break-words leading-snug block"
-                                                            title="{{ $act }}">&bull;
-                                                            {{ $act }}</span>
-                                                    </td>
-                                                    <!-- Col 2: Action Button -->
-                                                    <td class="py-2 px-2 border-r border-slate-200 bg-slate-50">
-                                                        <div class="flex items-center justify-between gap-1">
-                                                            <button type="button"
-                                                                onclick="addRowUnderPap({{ $pap->id }}, '{{ addslashes($pap->code) }}', '{{ addslashes($pap->name) }}', '{{ addslashes($subProg) }}', '{{ addslashes($act) }}')"
-                                                                class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] transition flex items-center gap-1 shadow-sm">
-                                                                + Add Indicator Row
-                                                            </button>
-                                                            <button type="button"
-                                                                onclick="removeHeaderRow(this, 'Activity')"
-                                                                class="text-slate-400 hover:text-rose-600 font-bold text-base px-1 leading-none transition"
-                                                                title="Remove Activity Header">&times;</button>
-                                                        </div>
-                                                    </td>
-                                                    <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                                                    <td class="border-r border-slate-200 bg-white"></td>
-                                                    <td class="border-r border-slate-300 bg-amber-50/20"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-200 bg-white"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-200 bg-white"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-200 bg-white"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-100 bg-white"></td>
-                                                    <td class="border-r border-slate-200 bg-white"></td>
-                                                    <td class="border-r border-slate-300 bg-slate-100"></td>
-                                                    <td class="border-r border-slate-200 bg-white"></td>
-                                                    <td class="bg-white"></td>
-                                                </tr>
-                                            @endif
-
-                                            <tr class="data-row hover:bg-slate-50/80 transition"
-                                                id="row_{{ $rowIndex }}" data-index="{{ $rowIndex }}"
-                                                data-plan-id="{{ $plan->id }}" data-pap-id="{{ $pap->id }}"
-                                                data-subprogram="{{ $subProg }}"
-                                                data-activity="{{ $act }}">
-                                                <input type="hidden" name="plans[{{ $rowIndex }}][pap_id]"
-                                                    value="{{ $pap->id }}">
-                                                <input type="hidden"
-                                                    name="plans[{{ $rowIndex }}][performance_indicator_id]"
-                                                    value="{{ $indicator->id }}">
-                                                <input type="hidden" name="plans[{{ $rowIndex }}][sub_program]"
-                                                    value="{{ $subProg }}">
-                                                <input type="hidden" name="plans[{{ $rowIndex }}][activity]"
-                                                    value="{{ $act }}">
-
-                                                <!-- Col 1: Specific Activity / Breakdown -->
-                                                <td class="p-0 border-r border-slate-200 align-top min-w-[340px] max-w-[440px] w-[380px]">
-                                                    <textarea name="plans[{{ $rowIndex }}][sub_activity]"
-                                                        placeholder="1. Specific activity or task breakdown..."
-                                                        oninput="autoResizeTextarea(this)"
-                                                        class="auto-expand-textarea w-full p-2.5 text-xs font-semibold text-slate-800 bg-transparent border-0 rounded-none focus:outline-none focus:ring-0 leading-relaxed block">{{ $subAct ?: $indicator->name }}</textarea>
-                                                </td>
-
-                                                <!-- Col 2: Key Indicator (KPI) -->
-                                                <td class="p-0 border-r border-slate-200 align-top min-w-[320px] max-w-[420px] w-[360px]">
-                                                    <textarea name="plans[{{ $rowIndex }}][indicator_name]"
-                                                        placeholder="Key Performance Indicator target text..."
-                                                        oninput="autoResizeTextarea(this)"
-                                                        class="auto-expand-textarea w-full p-2.5 text-xs font-semibold text-slate-800 bg-transparent border-0 rounded-none focus:outline-none focus:ring-0 leading-relaxed block">{{ $indicator->name }}</textarea>
-                                                </td>
-
-                                                <!-- Col 3: Unit -->
-                                                <td
-                                                    class="p-2 border-r border-slate-200 align-middle text-center bg-white min-w-[70px] w-[70px]">
-                                                    <input type="text"
-                                                        name="plans[{{ $rowIndex }}][unit_of_measure]"
-                                                        value="{{ $indicator->unit_of_measure }}"
-                                                        class="w-16 px-1.5 py-1 text-center font-bold text-slate-700 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:bg-white focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-
-                                                <!-- Col 4: Annual Target -->
-                                                <td
-                                                    class="p-2 border-r border-slate-300 align-middle bg-amber-50/40 text-center min-w-[100px] w-[100px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][annual_target]"
-                                                        id="annual_{{ $rowIndex }}" value="{{ $annualTarget }}"
-                                                        required oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-24 min-w-[90px] px-2 py-1 text-right font-mono font-black text-slate-900 border border-amber-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm">
-                                                </td>
-
-                                                <!-- Q1 Months -->
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m1_target]"
-                                                        id="m1_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m1_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m2_target]"
-                                                        id="m2_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m2_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m3_target]"
-                                                        id="m3_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m3_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                                                    <span id="q1_badge_{{ $rowIndex }}"
-                                                        class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                                                </td>
-
-                                                <!-- Q2 Months -->
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m4_target]"
-                                                        id="m4_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m4_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m5_target]"
-                                                        id="m5_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m5_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m6_target]"
-                                                        id="m6_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m6_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                                                    <span id="q2_badge_{{ $rowIndex }}"
-                                                        class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                                                </td>
-
-                                                <!-- Q3 Months -->
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m7_target]"
-                                                        id="m7_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m7_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m8_target]"
-                                                        id="m8_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m8_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m9_target]"
-                                                        id="m9_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m9_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                                                    <span id="q3_badge_{{ $rowIndex }}"
-                                                        class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                                                </td>
-
-                                                <!-- Q4 Months -->
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m10_target]"
-                                                        id="m10_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m10_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m11_target]"
-                                                        id="m11_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m11_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                                                    <input type="number" step="0.01" min="0"
-                                                        name="plans[{{ $rowIndex }}][m12_target]"
-                                                        id="m12_{{ $rowIndex }}"
-                                                        value="{{ (float) $plan->m12_target }}"
-                                                        oninput="recalcRow({{ $rowIndex }})"
-                                                        class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                                                </td>
-                                                <td
-                                                    class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                                                    <span id="q4_badge_{{ $rowIndex }}"
-                                                        class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                                                </td>
-
-                                                <!-- Balance Status -->
-                                                <td
-                                                    class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[105px] w-[105px]">
-                                                    <span id="balance_badge_{{ $rowIndex }}"
-                                                        class="text-[10px] font-black px-1.5 py-1 rounded bg-slate-100 text-slate-600 inline-block w-full text-center">
-                                                        0 / 0
-                                                    </span>
-                                                </td>
-
-                                                <!-- Presets & Actions -->
-                                                <td class="p-1 text-center align-middle bg-white min-w-[120px] w-[120px]">
-                                                    <div class="flex items-center justify-center gap-1">
-                                                        <button type="button"
-                                                            onclick="distributeEvenly({{ $rowIndex }})"
-                                                            class="px-1.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded border border-emerald-200"
-                                                            title="Distribute Evenly">
-                                                            ⚡Even
-                                                        </button>
-                                                        <button type="button"
-                                                            onclick="distributeQuarterly({{ $rowIndex }})"
-                                                            class="px-1.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-extrabold text-[10px] rounded border border-indigo-200"
-                                                            title="Distribute Quarterly">
-                                                            ⚡Qtr
-                                                        </button>
-                                                        <button type="button" onclick="removeRow({{ $rowIndex }})"
-                                                            class="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 rounded border border-rose-200 transition"
-                                                            title="Remove this row">
-                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                @php $rowIndex++; @endphp
-                @endforeach
-                @endforeach
-                @endforeach
-                @endif
-                </tbody>
-                </table>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="document.getElementById('smartSheetForm').requestSubmit()"
+                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
+                            <span>💾</span>
+                            <span>Save BED-2 Plan</span>
+                        </button>
+                    </div>
+                </div>
             </div>
+        </form>
     </div>
 
-    <!-- Sticky Bottom Floating Action Bar -->
-    <div
-        class="sticky bottom-4 z-20 bg-white/95 backdrop-blur-md text-slate-800 p-4 rounded-2xl shadow-lg border border-slate-200/90 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-        <div class="flex items-center gap-3">
-            <div
-                class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center text-lg shrink-0">
-                📊
-            </div>
-            <div>
-                <p class="font-extrabold text-sm text-slate-900">
-                    <span id="encodedCountDisplay" class="text-emerald-700">{{ $rowIndex }}</span> Physical Target Rows Configured
-                </p>
-                <p class="text-[11px] text-slate-500">
-                    Save changes anytime to store your targets as official baseline drafts.
-                </p>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-2.5 flex-wrap">
-            <button type="button" onclick="openNewCategoryPapModal()"
-                class="px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-extrabold text-xs transition flex items-center gap-1.5 shadow-sm">
-                <span class="text-emerald-600 font-extrabold text-sm leading-none">+</span>
-                <span>Add Program / Activity</span>
-            </button>
-            <button type="button" onclick="document.getElementById('smartSheetForm').requestSubmit()"
-                class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
-                <span>💾</span>
-                <span>Save BED-2 Plan</span>
-            </button>
-        </div>
-    </div>
-    </form>
-    </div>
-
-    <!-- Modal 1: Add Program (PAP) to Sheet -->
-    <div id="newCategoryPapModal"
-        class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-xs my-8"
-            onclick="event.stopPropagation()">
-            <div class="bg-slate-50/90 border-b border-slate-100 p-5 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-extrabold text-base shrink-0">
-                        +
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">
-                            Add Program (PAP) to Sheet
-                        </h3>
-                        <p class="text-[11px] text-slate-500 mt-0.5">
-                            Select an existing bureau program or create a new Category Banner &amp; Program.
-                        </p>
-                    </div>
-                </div>
-                <button type="button" onclick="closeNewCategoryPapModal()"
-                    class="text-slate-400 hover:text-slate-600 font-bold text-lg p-1 transition">&times;</button>
-            </div>
-
-            <form id="quickStructureForm" onsubmit="submitNewStructure(event)" class="p-6 space-y-4">
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label class="block font-black text-slate-700 uppercase tracking-wider text-xs">
-                            1. Program / PAP <span class="text-rose-500">*</span>
-                        </label>
-                        <span class="text-[10px] text-slate-400 font-semibold">Type to jump / lock</span>
-                    </div>
-
-                    <div class="relative mb-2">
-                        <input type="text" id="modalPapSearchInput"
-                            placeholder="Type any word or code to lock (e.g. Crop, Seed, Plant, PAP-01)..."
-                            oninput="filterPapSelect(this.value)"
-                            onkeydown="handlePapSearchKeydown(event)"
-                            autocomplete="off"
-                            class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-sm transition">
-                        <span class="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
-                    </div>
-
-                    <select id="modalPapSelect" onchange="onPapSelectChange(this)" required
-                        class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400">
-                        <option value="">-- Select a Bureau Program or Create New --</option>
-                        <optgroup label="✨ Bureau Program Catalog">
-                            @foreach ($paps as $p)
-                                <option value="{{ $p->id }}" data-category="{{ $p->category ?? 'Operations' }}"
-                                    data-code="{{ $p->code }}" data-name="{{ $p->name }}">
-                                    {{ $p->code }} &mdash; {{ $p->name }}
-                                    ({{ $p->category ?? 'Operations' }})
-                                </option>
-                            @endforeach
-                        </optgroup>
-                        <optgroup label="➕ Custom">
-                            <option value="new">+ Create Brand New Category Banner &amp; Program...</option>
-                        </optgroup>
-                    </select>
-                </div>
-
-                <div id="customPapFields" class="hidden space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                    <div>
-                        <label class="block font-black text-slate-700 uppercase tracking-wider mb-1 text-[11px]">
-                            Category Banner <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="text" list="category_options" id="modalCategoryInput" name="category"
-                            placeholder="e.g. III. OPERATIONS or type custom category..."
-                            class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-bold text-xs focus:outline-none focus:ring-2 focus:ring-slate-400">
-                        <p class="text-[10px] text-slate-400 mt-0.5">Top-level Roman numeral banner across BED-2 (e.g. III.
-                            OPERATIONS, IV. LOCALLY-FUNDED PROJECTS).</p>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <label class="block font-black text-slate-700 uppercase tracking-wider mb-1 text-[11px]">
-                                Code <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="text" id="modalPapCode" name="code" placeholder="e.g. AFRSP"
-                                class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-mono font-bold text-xs uppercase focus:outline-none focus:ring-2 focus:ring-slate-400">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block font-black text-slate-700 uppercase tracking-wider mb-1 text-[11px]">
-                                Program Name <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="text" id="modalPapName" name="name"
-                                placeholder="e.g. Agriculture and Fishery Regulatory Support Program"
-                                class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-bold text-xs focus:outline-none focus:ring-2 focus:ring-slate-400">
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-black text-slate-700 uppercase tracking-wider mb-1">
-                        2. Sub-Program / Component <span class="text-slate-400 font-normal">(Optional Header Row)</span>
-                    </label>
-                    <input type="text" id="modalSubProgram" name="sub_program"
-                        placeholder="e.g. Quality control and inspection and issuance of regulatory documents"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 font-semibold text-xs">
-                </div>
-
-                <div>
-                    <label class="block font-black text-slate-700 uppercase tracking-wider mb-1">
-                        3. Activity / Service <span class="text-slate-400 font-normal">(Optional Header Row)</span>
-                    </label>
-                    <input type="text" id="modalActivity" name="activity"
-                        placeholder="e.g. Issuance of Biosafety Permit"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 font-semibold text-xs">
-                </div>
-
-                <!-- Toggle to include target row or create header only -->
-                <div class="pt-2">
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" id="modalIncludeIndicatorChk" checked
-                            onchange="toggleModalIndicatorSection(this.checked)"
-                            class="rounded border-slate-300 text-slate-700 focus:ring-slate-400">
-                        <span class="font-extrabold text-slate-800 text-xs">Include initial target row now</span>
-                    </label>
-                    <p class="text-[10px] text-slate-400 ml-6">Uncheck if you only want to set up the Program/Activity
-                        headers with no targets yet.</p>
-                </div>
-
-                <div id="modalIndicatorSection"
-                    class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-700 mb-0.5">
-                            Col 1: Specific Activity / Task Process Step
-                        </label>
-                        <input type="text" id="modalSubActivity" name="indicator_sub_activity"
-                            placeholder="e.g. 1. Receive and conduct of initial technical assessment..."
-                            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-700 mb-0.5">
-                            Col 2: Key Indicator (KPI)
-                        </label>
-                        <input type="text" id="modalIndicatorName" name="indicator_name"
-                            placeholder="e.g. 6 GM applications assessed for sufficiency in substance..."
-                            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-700 mb-0.5">Unit of Measure</label>
-                            <input type="text" id="modalIndicatorUnit" name="indicator_unit"
-                                placeholder="e.g. Applications" value="Units"
-                                class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-700 mb-0.5">Annual Target</label>
-                            <input type="number" step="0.01" min="0" id="modalAnnualTarget" value="0"
-                                class="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 bg-white text-xs font-black text-slate-900 text-right">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="closeNewCategoryPapModal()"
-                        class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition">
-                        Cancel
-                    </button>
-                    <button type="submit" id="btnSubmitModal"
-                        class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition flex items-center gap-1.5">
-                        <span>Insert into Sheet</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal 2: Add Sub-Program Header Row (No Targets) -->
-    <div id="addSubProgramModal"
-        class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-xs"
-            onclick="event.stopPropagation()">
-            <div class="bg-slate-50/90 border-b border-slate-100 p-4 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-extrabold text-sm">+</span>
-                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Add Sub-Program Header Row</h3>
-                </div>
-                <button type="button" onclick="closeAddSubProgramModal()"
-                    class="text-slate-400 hover:text-slate-600 font-bold text-base transition">&times;</button>
-            </div>
-            <form onsubmit="submitSubProgramOnly(event)" class="p-5 space-y-4">
-                <input type="hidden" id="spModalPapId">
-                <input type="hidden" id="spModalPapCode">
-                <input type="hidden" id="spModalPapName">
-                <div>
-                    <label class="block font-black text-slate-700 uppercase tracking-wider mb-1">Sub-Program / Component
-                        Title</label>
-                    <input type="text" id="spModalTitle" required
-                        placeholder="e.g. Quality control and inspection and issuance of regulatory documents"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    <p class="text-[10px] text-slate-400 mt-1">This will insert a structural sub-header row across the
-                        table with no targets.</p>
-                </div>
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="closeAddSubProgramModal()"
-                        class="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
-                    <button type="submit"
-                        class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-sm transition">Insert
-                        Sub-Program Row</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal 3: Add Activity Header Row (No Targets) -->
-    <div id="addActivityModal"
-        class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-xs"
-            onclick="event.stopPropagation()">
-            <div class="bg-slate-50/90 border-b border-slate-100 p-4 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-extrabold text-sm">+</span>
-                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Add Activity Header Row</h3>
-                </div>
-                <button type="button" onclick="closeAddActivityModal()"
-                    class="text-slate-400 hover:text-slate-600 font-bold text-base transition">&times;</button>
-            </div>
-            <form onsubmit="submitActivityOnly(event)" class="p-5 space-y-4">
-                <input type="hidden" id="actModalPapId">
-                <input type="hidden" id="actModalPapCode">
-                <input type="hidden" id="actModalPapName">
-                <input type="hidden" id="actModalSubProgram">
-                <div>
-                    <label class="block font-black text-slate-700 uppercase tracking-wider mb-1">Operational Activity /
-                        Service Title</label>
-                    <input type="text" id="actModalTitle" required placeholder="e.g. Issuance of Biosafety Permit"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400">
-                    <p class="text-[10px] text-slate-400 mt-1">This will insert an Activity row with a direct "+ Add
-                        Indicator Row" button.</p>
-                </div>
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="closeAddActivityModal()"
-                        class="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
-                    <button type="submit"
-                        class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-sm transition">Insert
-                        Activity Row</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Datalist for Category Autocomplete -->
-    <datalist id="category_options">
-        @foreach ($categories as $cat)
-            <option value="{{ $cat }}"></option>
-        @endforeach
-    </datalist>
-
-    <!-- Client-Side JavaScript for Smart Sheet Calculations & Live Row Management -->
+    <!-- Client-Side JavaScript for BED-2 Spreadsheet Layout with Dedicated Hierarchy Rows -->
     <script>
-        let totalRows = {{ $rowIndex }};
+        const bureauCatalog = @json($catalog ?? []);
+        const existingPlansData = @json($existingPlans->values() ?? []);
+        const currentOuId = {{ (int) $defaultOuId }};
+        let totalRows = 0;
 
         document.addEventListener('DOMContentLoaded', function() {
-            for (let i = 0; i < totalRows; i++) {
-                recalcRow(i);
+            if (existingPlansData && existingPlansData.length > 0) {
+                // Group existing plans into their Program -> Activity -> Subactivity -> Indicator hierarchy
+                loadExistingPlansHierarchically(existingPlansData);
+            } else {
+                // Initialize clean spreadsheet with just 1 Program row.
+                // No default indicator row: user can add Activity, Sub-activity, or Indicator rows as needed.
+                addProgramRow();
             }
+            syncAllHierarchies();
             updateSummaryCounters();
+            resizeAllTextareas();
+            setTimeout(resizeAllTextareas, 50);
+            setTimeout(resizeAllTextareas, 200);
+            window.addEventListener('resize', resizeAllTextareas);
+            if (document.fonts) {
+                document.fonts.ready.then(resizeAllTextareas);
+            }
+
+            // Intercept form submission to guarantee all indicator rows have synced parent hierarchy
+            const form = document.getElementById('smartSheetForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    syncAllHierarchies();
+
+                    const dataRows = document.querySelectorAll('.data-row');
+                    if (dataRows.length === 0) {
+                        e.preventDefault();
+                        alert('Please add at least one Indicator Row before saving.');
+                        return false;
+                    }
+
+                    for (const tr of dataRows) {
+                        const idx = tr.getAttribute('data-index');
+                        const papId = document.getElementById(`pap_id_${idx}`)?.value;
+                        const progName = document.getElementById(`program_name_${idx}`)?.value?.trim();
+                        const indName = document.getElementById(`indicator_search_${idx}`)?.value.trim();
+
+                        if (!papId && !progName) {
+                            e.preventDefault();
+                            alert(
+                                'Every indicator row must be placed under a Program / PAP. Please type a Program above your indicators.'
+                            );
+                            return false;
+                        }
+                        if (!indName) {
+                            e.preventDefault();
+                            alert(
+                                'Please enter a Key Performance Indicator for all indicator rows.'
+                            );
+                            document.getElementById(`indicator_search_${idx}`)?.focus();
+                            return false;
+                        }
+                    }
+                });
+            }
         });
 
         function changeOuOrYear() {
@@ -1050,45 +383,953 @@
             window.location.href = "{{ route('bed2-plans.create') }}?operating_unit_id=" + ouId + "&year=" + year;
         }
 
-        function toggleModalIndicatorSection(isChecked) {
-            const sec = document.getElementById('modalIndicatorSection');
-            const indNameInput = document.getElementById('modalIndicatorName');
-            if (isChecked) {
-                sec.classList.remove('hidden');
-                indNameInput.required = true;
+        // Dynamically auto-resizes multi-line textareas so content is cleanly wrapped and never truncated
+        function autoResizeTextarea(el) {
+            if (!el) return;
+            el.style.setProperty('height', 'auto', 'important');
+            const targetHeight = Math.max(28, el.scrollHeight);
+            el.style.setProperty('height', targetHeight + 'px', 'important');
+        }
+
+        function resizeAllTextareas() {
+            document.querySelectorAll('.sheet-cell-textarea').forEach(autoResizeTextarea);
+        }
+
+        // Prevent Enter key in single-cell textareas from inserting unwanted linebreaks
+        document.addEventListener('keydown', function(e) {
+            if (e.target && e.target.classList.contains('sheet-cell-textarea') && e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+            }
+        });
+
+        // Helper to insert a row either after a specific reference row or at the end of the table
+        function insertRow(html, insertAfterRow = null) {
+            const tbody = document.getElementById('sheetTbody');
+            if (insertAfterRow && insertAfterRow.parentNode === tbody) {
+                insertAfterRow.insertAdjacentHTML('afterend', html);
+                return insertAfterRow.nextElementSibling;
             } else {
-                sec.classList.add('hidden');
-                indNameInput.required = false;
+                tbody.insertAdjacentHTML('beforeend', html);
+                return tbody.lastElementChild;
             }
         }
 
-        function onPapSelectChange(selectEl) {
-            const customDiv = document.getElementById('customPapFields');
-            const catInput = document.getElementById('modalCategoryInput');
-            const codeInput = document.getElementById('modalPapCode');
-            const nameInput = document.getElementById('modalPapName');
+        // Removes any structural or header row and resyncs
+        function removeRow(tr) {
+            if (!tr) return;
+            tr.remove();
+            syncAllHierarchies();
+            updateSummaryCounters();
+        }
 
-            if (selectEl.value === 'new') {
-                customDiv.classList.remove('hidden');
-                catInput.required = true;
-                codeInput.required = true;
-                nameInput.required = true;
-                catInput.value = '';
-                codeInput.value = '';
-                nameInput.value = '';
-            } else if (selectEl.value !== '') {
-                customDiv.classList.add('hidden');
-                catInput.required = false;
-                codeInput.required = false;
-                nameInput.required = false;
-
-                const opt = selectEl.options[selectEl.selectedIndex];
-                catInput.value = opt.getAttribute('data-category') || 'Operations';
-                codeInput.value = opt.getAttribute('data-code') || '';
-                nameInput.value = opt.getAttribute('data-name') || '';
-            } else {
-                customDiv.classList.add('hidden');
+        // Toggle row in-between insert popover menu
+        function toggleRowInsertMenu(btn) {
+            const menu = btn.nextElementSibling;
+            if (!menu) return;
+            const isHidden = menu.classList.contains('hidden');
+            closeAllInsertMenus();
+            if (isHidden) {
+                menu.classList.remove('hidden');
             }
+        }
+
+        function closeAllInsertMenus() {
+            document.querySelectorAll('.row-insert-menu').forEach(m => m.classList.add('hidden'));
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.row-insert-menu') && !e.target.closest(
+                    'button[onclick*="toggleRowInsertMenu"]')) {
+                closeAllInsertMenus();
+            }
+        });
+
+        // Traverses backwards to find the nearest preceding Program row
+        function getPrecedingProgram(rowEl) {
+            let prev = rowEl ? rowEl.previousElementSibling : null;
+            while (prev) {
+                if (prev.classList.contains('program-row')) {
+                    const idInput = prev.querySelector('.program-id-hidden');
+                    const nameInput = prev.querySelector('.program-input');
+                    return {
+                        id: idInput ? idInput.value : '',
+                        name: nameInput ? nameInput.value : ''
+                    };
+                }
+                prev = prev.previousElementSibling;
+            }
+            return null;
+        }
+
+        // Traverses backwards to find the nearest preceding Activity row within the current Program
+        function getPrecedingActivity(rowEl) {
+            let prev = rowEl ? rowEl.previousElementSibling : null;
+            while (prev) {
+                if (prev.classList.contains('program-row')) break; // Program boundary reached
+                if (prev.classList.contains('activity-row')) {
+                    const actInput = prev.querySelector('.activity-input');
+                    return actInput ? actInput.value.trim() : '';
+                }
+                prev = prev.previousElementSibling;
+            }
+            return '';
+        }
+
+        // Traverses backwards to find the nearest preceding Sub-activity row within the current Activity
+        function getPrecedingSubactivity(rowEl) {
+            let prev = rowEl ? rowEl.previousElementSibling : null;
+            while (prev) {
+                if (prev.classList.contains('program-row') || prev.classList.contains('activity-row'))
+                    break; // Boundary reached
+                if (prev.classList.contains('subactivity-row')) {
+                    const subInput = prev.querySelector('.subactivity-input');
+                    return subInput ? subInput.value.trim() : '';
+                }
+                prev = prev.previousElementSibling;
+            }
+            return '';
+        }
+
+        // Scans the full DOM top-to-bottom and stamps parent values into all indicator rows
+        function syncAllHierarchies() {
+            const tbody = document.getElementById('sheetTbody');
+            if (!tbody) return;
+
+            let currentPapId = '';
+            let currentPapName = '';
+            let currentActivity = '';
+            let currentSubProgram = '';
+
+            for (const tr of tbody.children) {
+                if (tr.classList.contains('program-row')) {
+                    const idInput = tr.querySelector('.program-id-hidden');
+                    const nameInput = tr.querySelector('.program-input');
+                    currentPapId = idInput ? idInput.value : '';
+                    currentPapName = nameInput ? nameInput.value.trim() : '';
+                    currentActivity = '';
+                    currentSubProgram = '';
+                } else if (tr.classList.contains('activity-row')) {
+                    const actInput = tr.querySelector('.activity-input');
+                    currentActivity = actInput ? actInput.value.trim() : '';
+                    currentSubProgram = ''; // Reset sub-program whenever a new activity is encountered
+                } else if (tr.classList.contains('subactivity-row')) {
+                    const subInput = tr.querySelector('.subactivity-input');
+                    currentSubProgram = subInput ? subInput.value.trim() : '';
+                } else if (tr.classList.contains('data-row')) {
+                    const idx = tr.getAttribute('data-index');
+                    const papHidden = document.getElementById(`pap_id_${idx}`);
+                    const progHidden = document.getElementById(`program_name_${idx}`);
+                    const actHidden = document.getElementById(`activity_${idx}`);
+                    const subHidden = document.getElementById(`sub_program_${idx}`);
+                    if (papHidden) papHidden.value = currentPapId;
+                    if (progHidden) progHidden.value = currentPapName;
+                    if (actHidden) actHidden.value = currentActivity;
+                    if (subHidden) subHidden.value = currentSubProgram;
+                }
+            }
+        }
+
+        // Loads saved plans structured under their dedicated hierarchy rows
+        function loadExistingPlansHierarchically(plans) {
+            let lastProgram = null;
+            let lastActivity = null;
+            let lastSubProgram = null;
+
+            plans.forEach(plan => {
+                const pap = plan.pap;
+                const progName = pap ? (pap.category || pap.name) : '';
+                const actName = plan.activity || (plan.performance_indicator ? plan.performance_indicator.activity :
+                    '');
+                const subProgName = plan.sub_program || (plan.performance_indicator ? plan.performance_indicator
+                    .sub_program : '');
+
+                if (progName && progName !== lastProgram) {
+                    addProgramRow(plan.pap_id, progName);
+                    lastProgram = progName;
+                    lastActivity = null;
+                    lastSubProgram = null;
+                }
+
+                if (actName && actName !== lastActivity) {
+                    addActivityRow(actName);
+                    lastActivity = actName;
+                    lastSubProgram = null; // Always reset sub-program on activity change
+                }
+
+                if (subProgName && subProgName !== lastSubProgram) {
+                    addSubactivityRow(subProgName);
+                    lastSubProgram = subProgName;
+                }
+
+                addIndicatorRow(plan);
+            });
+            syncAllHierarchies();
+            resizeAllTextareas();
+            setTimeout(resizeAllTextareas, 50);
+            setTimeout(resizeAllTextareas, 200);
+        }
+
+        // 1. PROGRAM ROW: Dedicated structural row with NOTHING in Indicator & Target columns
+        function addProgramRow(progId = '', progName = '', insertAfterRow = null) {
+            const rowId = 'prog_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+            const html = `
+                <tr class="program-row bg-slate-100/90 border-t-2 border-b border-slate-300 font-bold select-none" id="${rowId}">
+                    <!-- Col 1 & 2: Program Title (Bleeds across Key Indicators column with full auto-wrapping) -->
+                    <td colspan="2" class="p-1 px-2 border-r border-slate-300 border-l-4 border-l-purple-600 align-middle">
+                        <div class="relative w-full">
+                            <textarea rows="1" class="program-input sheet-cell-input sheet-cell-textarea text-xs font-black text-slate-900 px-2 py-1 tracking-wide uppercase placeholder:text-slate-400 placeholder:normal-case placeholder:font-normal w-full"
+                                placeholder="Type Program / PAP title..." autocomplete="off"
+                                oninput="autoResizeTextarea(this)">${escapeHtml(progName)}</textarea>
+                            <input type="hidden" class="program-id-hidden" value="${progId}">
+                            <div class="autocomplete-dropdown absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-[60] max-h-64 overflow-y-auto hidden min-w-[360px] w-full"></div>
+                        </div>
+                    </td>
+                    <!-- Col 3: Unit (Blank) -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <!-- Col 4: Annual Target (Blank) -->
+                    <td class="p-1 border-r border-slate-300 bg-amber-50/30"></td>
+                    <!-- Q1 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-emerald-300 bg-emerald-100/50"></td>
+                    <!-- Q2 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-sky-300 bg-sky-100/50"></td>
+                    <!-- Q3 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-amber-300 bg-amber-100/50"></td>
+                    <!-- Q4 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <td class="p-1 border-r border-purple-300 bg-purple-100/50"></td>
+                    <!-- Balance (Blank) -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-100/60"></td>
+                    <!-- Col 22: Contextual Actions / Insert (Sticky Right) -->
+                    <td class="sticky right-0 z-20 p-1 text-center bg-slate-100 align-middle shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)] border-l border-slate-300 min-w-[210px] w-[210px]">
+                        <div class="grid grid-cols-2 gap-1 w-full max-w-[200px] mx-auto">
+                            <button type="button" onclick="addActivityRow('', this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[10px] rounded border border-indigo-200 shadow-2xs transition whitespace-nowrap text-center" title="Add an Activity under this Program">
+                                + Activity
+                            </button>
+                            <button type="button" onclick="addSubactivityRow('', this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-extrabold text-[10px] rounded border border-amber-200 shadow-2xs transition whitespace-nowrap text-center" title="Add a Sub-activity under this Program">
+                                + Sub-act
+                            </button>
+                            <button type="button" onclick="addIndicatorRow(null, this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold text-[10px] rounded border border-emerald-200 shadow-2xs transition whitespace-nowrap text-center" title="Add an Indicator Row under this Program">
+                                + Indicator
+                            </button>
+                            <button type="button" onclick="removeRow(this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded border border-rose-200 shadow-2xs transition whitespace-nowrap text-center" title="Remove Program Row">
+                                ✕ Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            const newRow = insertRow(html, insertAfterRow);
+            const input = newRow.querySelector('.program-input');
+            const hidden = newRow.querySelector('.program-id-hidden');
+            if (input) {
+                autoResizeTextarea(input);
+                setTimeout(() => autoResizeTextarea(input), 30);
+                input.addEventListener('input', function() {
+                    if (hidden) hidden.value = '';
+                    syncAllHierarchies();
+                });
+            }
+            initProgramAutocomplete(newRow);
+            syncAllHierarchies();
+        }
+
+        // 2. ACTIVITY ROW: Dedicated structural row with NOTHING in Indicator & Target columns
+        function addActivityRow(actName = '', insertAfterRow = null) {
+            const rowId = 'act_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+            const html = `
+                <tr class="activity-row bg-slate-50 border-b border-slate-200 font-semibold select-none" id="${rowId}">
+                    <!-- Col 1 & 2: Activity Title (Bleeds across Key Indicators column with full auto-wrapping) -->
+                    <td colspan="2" class="p-1 px-2 border-r border-slate-200 border-l-4 border-l-indigo-500 align-middle">
+                        <div class="relative w-full pl-3">
+                            <textarea rows="1" class="activity-input sheet-cell-input sheet-cell-textarea text-xs font-bold text-slate-800 px-2 py-1 placeholder:text-slate-400 placeholder:font-normal w-full"
+                                placeholder="Type Activity title..." autocomplete="off"
+                                oninput="autoResizeTextarea(this)">${escapeHtml(actName)}</textarea>
+                            <div class="autocomplete-dropdown absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-[60] max-h-64 overflow-y-auto hidden min-w-[360px] w-full"></div>
+                        </div>
+                    </td>
+                    <!-- Col 3: Unit (Blank) -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <!-- Col 4: Annual Target (Blank) -->
+                    <td class="p-1 border-r border-slate-300 bg-amber-50/20"></td>
+                    <!-- Q1 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-emerald-300 bg-emerald-50/60"></td>
+                    <!-- Q2 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-sky-300 bg-sky-50/60"></td>
+                    <!-- Q3 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-amber-300 bg-amber-50/60"></td>
+                    <!-- Q4 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <td class="p-1 border-r border-purple-300 bg-purple-50/60"></td>
+                    <!-- Balance (Blank) -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/70"></td>
+                    <!-- Col 22: Contextual Actions / Insert (Sticky Right) -->
+                    <td class="sticky right-0 z-20 p-1 text-center bg-slate-50 align-middle shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)] border-l border-slate-200 min-w-[210px] w-[210px]">
+                        <div class="grid grid-cols-2 gap-1 w-full max-w-[200px] mx-auto">
+                            <button type="button" onclick="addActivityRow('', this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[10px] rounded border border-indigo-200 shadow-2xs transition whitespace-nowrap text-center" title="Add another consecutive Activity">
+                                + Activity
+                            </button>
+                            <button type="button" onclick="addSubactivityRow('', this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-extrabold text-[10px] rounded border border-amber-200 shadow-2xs transition whitespace-nowrap text-center" title="Add a Sub-activity under this Activity">
+                                + Sub-act
+                            </button>
+                            <button type="button" onclick="addIndicatorRow(null, this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold text-[10px] rounded border border-emerald-200 shadow-2xs transition whitespace-nowrap text-center" title="Add an Indicator Row under this Activity">
+                                + Indicator
+                            </button>
+                            <button type="button" onclick="removeRow(this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded border border-rose-200 shadow-2xs transition whitespace-nowrap text-center" title="Remove Activity Row">
+                                ✕ Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            const newRow = insertRow(html, insertAfterRow);
+            const input = newRow.querySelector('.activity-input');
+            if (input) {
+                autoResizeTextarea(input);
+                setTimeout(() => autoResizeTextarea(input), 30);
+                input.addEventListener('input', function() {
+                    syncAllHierarchies();
+                });
+            }
+            initActivityAutocomplete(newRow);
+            syncAllHierarchies();
+        }
+
+        // 3. SUB-ACTIVITY ROW: Dedicated structural row with NOTHING in Indicator & Target columns
+        function addSubactivityRow(subActName = '', insertAfterRow = null) {
+            const rowId = 'subact_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+            const html = `
+                <tr class="subactivity-row bg-slate-50/50 border-b border-slate-200 select-none" id="${rowId}">
+                    <!-- Col 1 & 2: Sub-activity Title (Bleeds across Key Indicators column with full auto-wrapping) -->
+                    <td colspan="2" class="p-1 px-2 border-r border-slate-200 border-l-4 border-l-amber-500 align-middle">
+                        <div class="relative w-full pl-6">
+                            <textarea rows="1" class="subactivity-input sheet-cell-input sheet-cell-textarea text-xs font-semibold text-slate-700 px-2 py-1 placeholder:text-slate-400 placeholder:font-normal w-full"
+                                placeholder="Type sub-activity or component title..." autocomplete="off"
+                                oninput="autoResizeTextarea(this)">${escapeHtml(subActName)}</textarea>
+                        </div>
+                    </td>
+                    <!-- Col 3: Unit (Blank) -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <!-- Col 4: Annual Target (Blank) -->
+                    <td class="p-1 border-r border-slate-300 bg-amber-50/10"></td>
+                    <!-- Q1 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-emerald-300 bg-emerald-50/40"></td>
+                    <!-- Q2 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-sky-300 bg-sky-50/40"></td>
+                    <!-- Q3 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-amber-300 bg-amber-50/40"></td>
+                    <!-- Q4 Months & Total -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <td class="p-1 border-r border-purple-300 bg-purple-50/40"></td>
+                    <!-- Balance (Blank) -->
+                    <td class="p-1 border-r border-slate-200 bg-slate-50/40"></td>
+                    <!-- Col 22: Contextual Actions / Insert (Sticky Right) -->
+                    <td class="sticky right-0 z-20 p-1 text-center bg-slate-50 align-middle shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)] border-l border-slate-200 min-w-[210px] w-[210px]">
+                        <div class="grid grid-cols-2 gap-1 w-full max-w-[200px] mx-auto">
+                            <button type="button" onclick="addSubactivityRow('', this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-extrabold text-[10px] rounded border border-amber-200 shadow-2xs transition whitespace-nowrap text-center" title="Add another consecutive Sub-activity">
+                                + Sub-act
+                            </button>
+                            <button type="button" onclick="addActivityRow('', this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[10px] rounded border border-indigo-200 shadow-2xs transition whitespace-nowrap text-center" title="Add an Activity row directly below this Sub-activity">
+                                + Activity
+                            </button>
+                            <button type="button" onclick="addIndicatorRow(null, this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold text-[10px] rounded border border-emerald-200 shadow-2xs transition whitespace-nowrap text-center" title="Add an Indicator Row under this Sub-activity">
+                                + Indicator
+                            </button>
+                            <button type="button" onclick="removeRow(this.closest('tr'))"
+                                class="px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded border border-rose-200 shadow-2xs transition whitespace-nowrap text-center" title="Remove Sub-activity Row">
+                                ✕ Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            const newRow = insertRow(html, insertAfterRow);
+            const input = newRow.querySelector('.subactivity-input');
+            if (input) {
+                autoResizeTextarea(input);
+                setTimeout(() => autoResizeTextarea(input), 30);
+                input.addEventListener('input', function() {
+                    syncAllHierarchies();
+                });
+            }
+            syncAllHierarchies();
+        }
+
+        // 4. INDICATOR ROW: Sleek In-Cell Spreadsheet Row with Direct Cell Inputs & No Redundant Labels
+        function addIndicatorRow(planData = null, insertAfterRow = null) {
+            const idx = totalRows++;
+
+            // Resolve values dynamically from planData or DOM context
+            let papId = planData ? planData.pap_id : '';
+            let programName = planData ? (planData.program_name || (planData.pap ? (planData.pap.category || planData.pap.name) : '')) : '';
+            let activity = planData ? (planData.activity || (planData.performance_indicator ? planData.performance_indicator
+                .activity : '')) : '';
+            let subProgram = planData ? (planData.sub_program || (planData.performance_indicator ? planData
+                .performance_indicator.sub_program : '')) : '';
+            let subActivity = planData ? (planData.sub_activity || (planData.performance_indicator ? planData
+                .performance_indicator.sub_activity : '')) : '';
+            let indicatorId = planData ? planData.performance_indicator_id : '';
+            let indicatorName = planData ? (planData.indicator_name || (planData.performance_indicator ? planData
+                .performance_indicator.name : '')) : '';
+            let indicatorCode = planData ? (planData.indicator_code || (planData.performance_indicator ? planData
+                .performance_indicator.code : '')) : '';
+            let unit = planData ? (planData.unit_of_measure || (planData.performance_indicator ? planData
+                .performance_indicator.unit_of_measure : '')) : '';
+            let annualTarget = planData ? parseFloat(planData.annual_target || 0) : 0;
+            let planId = planData ? (planData.id || '') : '';
+
+            const m = [];
+            for (let i = 1; i <= 12; i++) {
+                m[i] = planData ? parseFloat(planData[`m${i}_target`] || 0) : 0;
+            }
+
+            const html = `
+                <tr class="data-row hover:bg-slate-50/90 transition border-b border-slate-200" id="row_${idx}" data-index="${idx}" data-plan-id="${planId}">
+                    <!-- Col 1: Specific Process Step / Task Breakdown -->
+                    <td class="p-1 border-r border-slate-200 align-middle min-w-[320px] max-w-[400px] w-[350px]">
+                        <div class="w-full pl-10 pr-1 py-0.5">
+                            <textarea rows="1" name="plans[${idx}][sub_activity]" id="sub_activity_${idx}"
+                                placeholder="Specific task or process step (optional)..."
+                                class="sheet-cell-input sheet-cell-textarea text-xs font-medium text-slate-800 px-2 py-1 placeholder:text-slate-400 w-full"
+                                oninput="autoResizeTextarea(this)">${escapeHtml(subActivity)}</textarea>
+                            <input type="hidden" name="plans[${idx}][pap_id]" id="pap_id_${idx}" value="${papId}">
+                            <input type="hidden" name="plans[${idx}][program_name]" id="program_name_${idx}" value="${escapeHtml(programName)}">
+                            <input type="hidden" name="plans[${idx}][activity]" id="activity_${idx}" value="${escapeHtml(activity)}">
+                            <input type="hidden" name="plans[${idx}][sub_program]" id="sub_program_${idx}" value="${escapeHtml(subProgram)}">
+                        </div>
+                    </td>
+
+                    <!-- Col 2: Key Indicators (STRICTLY ON INDICATOR ROWS!) -->
+                    <td class="p-1 border-r border-slate-200 align-middle min-w-[280px] max-w-[360px] w-[320px] relative">
+                        <div class="w-full py-0.5">
+                            <textarea rows="1" name="plans[${idx}][indicator_name]" id="indicator_search_${idx}"
+                                placeholder="Type Key Performance Indicator..."
+                                autocomplete="off"
+                                class="sheet-cell-input sheet-cell-textarea text-xs font-bold text-slate-900 px-2.5 py-1 placeholder:text-slate-400 w-full"
+                                oninput="autoResizeTextarea(this)">${escapeHtml(indicatorName)}</textarea>
+                            <input type="hidden" name="plans[${idx}][performance_indicator_id]" id="indicator_id_${idx}" value="${indicatorId}">
+                            <input type="hidden" name="plans[${idx}][indicator_code]" id="indicator_code_${idx}" value="${escapeHtml(indicatorCode)}">
+                            <div id="indicator_dropdown_${idx}" class="autocomplete-dropdown absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-[60] max-h-64 overflow-y-auto hidden min-w-[360px] w-full"></div>
+                        </div>
+                    </td>
+
+                    <!-- Col 3: Unit -->
+                    <td class="p-0 border-r border-slate-200 text-center align-middle bg-slate-50/40 min-w-[65px] w-[65px]">
+                        <input type="text" name="plans[${idx}][unit_of_measure]" id="unit_${idx}" value="${escapeHtml(unit)}"
+                            class="sheet-cell-input text-center font-bold text-slate-700 py-1.5 text-xs">
+                    </td>
+
+                    <!-- Col 4: Annual Target -->
+                    <td class="p-0 border-r border-slate-300 align-middle bg-amber-50/30 text-center min-w-[95px] w-[95px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][annual_target]"
+                            id="annual_${idx}" value="${annualTarget}" required
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-cell-input-amber sheet-number-input text-right pr-2 font-mono font-black text-slate-900 py-1.5 text-xs">
+                    </td>
+
+                    <!-- Q1 Months -->
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m1_target]" id="m1_${idx}" value="${m[1]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m2_target]" id="m2_${idx}" value="${m[2]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-200 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m3_target]" id="m3_${idx}" value="${m[3]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-emerald-200 text-center align-middle bg-emerald-50/70 min-w-[65px] w-[65px]">
+                        <span id="q1_badge_${idx}" class="font-mono font-extrabold text-xs text-emerald-950 block py-1.5">0.00</span>
+                    </td>
+
+                    <!-- Q2 Months -->
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m4_target]" id="m4_${idx}" value="${m[4]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m5_target]" id="m5_${idx}" value="${m[5]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-200 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m6_target]" id="m6_${idx}" value="${m[6]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-sky-200 text-center align-middle bg-sky-50/70 min-w-[65px] w-[65px]">
+                        <span id="q2_badge_${idx}" class="font-mono font-extrabold text-xs text-sky-950 block py-1.5">0.00</span>
+                    </td>
+
+                    <!-- Q3 Months -->
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m7_target]" id="m7_${idx}" value="${m[7]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m8_target]" id="m8_${idx}" value="${m[8]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-200 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m9_target]" id="m9_${idx}" value="${m[9]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-amber-200 text-center align-middle bg-amber-50/70 min-w-[65px] w-[65px]">
+                        <span id="q3_badge_${idx}" class="font-mono font-extrabold text-xs text-amber-950 block py-1.5">0.00</span>
+                    </td>
+
+                    <!-- Q4 Months -->
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m10_target]" id="m10_${idx}" value="${m[10]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-100 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m11_target]" id="m11_${idx}" value="${m[11]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-slate-200 text-center align-middle min-w-[60px] w-[60px]">
+                        <input type="number" step="0.01" min="0" name="plans[${idx}][m12_target]" id="m12_${idx}" value="${m[12]}"
+                            oninput="recalcRow(${idx})"
+                            class="sheet-cell-input sheet-number-input text-center font-mono font-semibold text-slate-800 py-1.5 text-xs">
+                    </td>
+                    <td class="p-0 border-r border-purple-200 text-center align-middle bg-purple-50/70 min-w-[65px] w-[65px]">
+                        <span id="q4_badge_${idx}" class="font-mono font-extrabold text-xs text-purple-950 block py-1.5">0.00</span>
+                    </td>
+
+                    <!-- Balance Status -->
+                    <td class="p-1 border-r border-slate-200 text-center align-middle min-w-[90px] w-[90px]">
+                        <span id="balance_badge_${idx}" class="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 inline-block w-full text-center border border-slate-200">
+                            0 / 0
+                        </span>
+                    </td>
+
+                    <!-- Presets & Actions (Sticky Right) -->
+                    <td class="sticky right-0 z-10 p-1 text-center align-middle bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)] border-l border-slate-200 min-w-[210px] w-[210px]">
+                        <div class="grid grid-cols-2 gap-1 w-full max-w-[200px] mx-auto">
+                            <button type="button" onclick="distributeEvenly(${idx})"
+                                class="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded border border-emerald-200 shadow-2xs transition whitespace-nowrap text-center" title="Distribute Evenly across 12 months">
+                                ⚡Even
+                            </button>
+                            <button type="button" onclick="distributeQuarterly(${idx})"
+                                class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-extrabold text-[10px] rounded border border-indigo-200 shadow-2xs transition whitespace-nowrap text-center" title="Distribute Quarterly">
+                                ⚡Qtr
+                            </button>
+                            <!-- In-between Insert Dropdown -->
+                            <div class="relative w-full text-left">
+                                <button type="button" onclick="toggleRowInsertMenu(this)"
+                                    class="w-full px-1.5 py-0.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-extrabold text-[10px] rounded border border-slate-300 transition flex items-center justify-center gap-0.5 shadow-2xs whitespace-nowrap" title="Insert a new row directly below this row">
+                                    <span>+ Insert</span>
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                                <div class="row-insert-menu hidden absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50 text-left text-xs font-bold divide-y divide-slate-100">
+                                    <button type="button" onclick="addIndicatorRow(null, this.closest('tr')); closeAllInsertMenus();" class="w-full px-3 py-1.5 text-left text-emerald-800 hover:bg-emerald-50 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                                        <span>+ Indicator Row</span>
+                                    </button>
+                                    <button type="button" onclick="addActivityRow('', this.closest('tr')); closeAllInsertMenus();" class="w-full px-3 py-1.5 text-left text-indigo-700 hover:bg-indigo-50 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                                        <span>+ Activity Header</span>
+                                    </button>
+                                    <button type="button" onclick="addSubactivityRow('', this.closest('tr')); closeAllInsertMenus();" class="w-full px-3 py-1.5 text-left text-amber-700 hover:bg-amber-50 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-amber-600"></span>
+                                        <span>+ Sub-activity Header</span>
+                                    </button>
+                                    <button type="button" onclick="addProgramRow('', '', this.closest('tr')); closeAllInsertMenus();" class="w-full px-3 py-1.5 text-left text-purple-700 hover:bg-purple-50 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                                        <span>+ Program / PAP</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeSpreadsheetRow(${idx})"
+                                class="px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded border border-rose-200 shadow-2xs transition whitespace-nowrap text-center" title="Delete this row">
+                                ✕ Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            const newRow = insertRow(html, insertAfterRow);
+            const subActEl = document.getElementById(`sub_activity_${idx}`);
+            const indSearchEl = document.getElementById(`indicator_search_${idx}`);
+            if (subActEl) autoResizeTextarea(subActEl);
+            if (indSearchEl) autoResizeTextarea(indSearchEl);
+            setTimeout(() => {
+                if (subActEl) autoResizeTextarea(subActEl);
+                if (indSearchEl) autoResizeTextarea(indSearchEl);
+            }, 30);
+
+            initIndicatorAutocomplete(idx);
+            syncAllHierarchies();
+            recalcRow(idx);
+            updateSummaryCounters();
+        }
+
+        // Generic Autocomplete Engine
+        function attachCombobox(inputEl, dropdownEl, getItemsFn, onSelectFn) {
+            function positionDropdown() {
+                const rect = inputEl.getBoundingClientRect();
+                const container = document.getElementById('tableScrollContainer');
+                const contRect = container ? container.getBoundingClientRect() : { bottom: window.innerHeight, top: 0 };
+                const spaceBelow = Math.min(window.innerHeight, contRect.bottom) - rect.bottom;
+
+                if (spaceBelow < 220 && (rect.top - contRect.top) > 200) {
+                    dropdownEl.classList.remove('top-full', 'mt-1');
+                    dropdownEl.classList.add('bottom-full', 'mb-1');
+                } else {
+                    dropdownEl.classList.remove('bottom-full', 'mb-1');
+                    dropdownEl.classList.add('top-full', 'mt-1');
+                }
+            }
+
+            function renderDropdown(items, query = '') {
+                dropdownEl.innerHTML = '';
+                if (!items || items.length === 0) {
+                    dropdownEl.classList.add('hidden');
+                    return;
+                }
+
+                const recommended = items.filter(i => i.isRecommended);
+                const others = items.filter(i => !i.isRecommended);
+
+                if (recommended.length > 0) {
+                    const header = document.createElement('div');
+                    header.className =
+                        'px-3 py-1.5 bg-amber-50 text-[10px] font-black text-amber-800 uppercase tracking-wider border-b border-amber-100 sticky top-0 z-10 shadow-xs';
+                    header.innerText = '⭐ Recommended for Your Division';
+                    dropdownEl.appendChild(header);
+
+                    recommended.forEach(item => {
+                        dropdownEl.appendChild(createItemEl(item));
+                    });
+                }
+
+                if (others.length > 0) {
+                    if (recommended.length > 0) {
+                        const header = document.createElement('div');
+                        header.className =
+                            'px-3 py-1.5 bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-wider border-b border-slate-100 sticky top-0 z-10 shadow-xs';
+                        header.innerText = 'Other Bureau Options';
+                        dropdownEl.appendChild(header);
+                    }
+                    others.forEach(item => {
+                        dropdownEl.appendChild(createItemEl(item));
+                    });
+                }
+
+                positionDropdown();
+                dropdownEl.classList.remove('hidden');
+            }
+
+            function createItemEl(item) {
+                const el = document.createElement('div');
+                el.className =
+                    'px-3 py-2 text-xs text-slate-800 hover:bg-emerald-50 hover:text-emerald-950 cursor-pointer transition border-b border-slate-50 last:border-b-0 flex items-center justify-between gap-2';
+                el.innerHTML = `
+                    <div class="truncate">
+                        <span class="font-bold">${item.isRecommended ? '⭐ ' : ''}${escapeHtml(item.label)}</span>
+                        ${item.sublabel ? `<span class="text-[10px] text-slate-400 block truncate">${escapeHtml(item.sublabel)}</span>` : ''}
+                    </div>
+                `;
+                el.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    inputEl.value = item.label;
+                    autoResizeTextarea(inputEl);
+                    onSelectFn(item);
+                    dropdownEl.classList.add('hidden');
+                });
+                return el;
+            }
+
+            inputEl.addEventListener('focus', function() {
+                const query = inputEl.value.trim().toLowerCase();
+                const allItems = getItemsFn();
+                const filtered = allItems.filter(i => i.label.toLowerCase().includes(query));
+                renderDropdown(filtered, query);
+            });
+
+            inputEl.addEventListener('input', function() {
+                const query = inputEl.value.trim().toLowerCase();
+                const allItems = getItemsFn();
+                const filtered = allItems.filter(i => i.label.toLowerCase().includes(query));
+                renderDropdown(filtered, query);
+            });
+
+            inputEl.addEventListener('blur', function() {
+                setTimeout(() => {
+                    dropdownEl.classList.add('hidden');
+                }, 180);
+            });
+        }
+
+        // Program Autocomplete in Program Row
+        function initProgramAutocomplete(rowEl) {
+            const input = rowEl.querySelector('.program-input');
+            const dropdown = rowEl.querySelector('.autocomplete-dropdown');
+            const hidden = rowEl.querySelector('.program-id-hidden');
+
+            attachCombobox(
+                input,
+                dropdown,
+                function() {
+                    const seen = new Map();
+                    bureauCatalog.forEach(p => {
+                        const catName = p.category || p.name;
+                        const isRec = p.operating_unit_ids && p.operating_unit_ids.includes(currentOuId);
+                        if (!seen.has(catName)) {
+                            seen.set(catName, {
+                                id: p.id,
+                                label: catName,
+                                sublabel: '',
+                                isRecommended: isRec,
+                                raw: p,
+                                paps: [p]
+                            });
+                        } else {
+                            const existing = seen.get(catName);
+                            existing.paps.push(p);
+                            if (isRec) {
+                                existing.isRecommended = true;
+                                existing.id = p.id;
+                                existing.raw = p;
+                            }
+                        }
+                    });
+                    return Array.from(seen.values());
+                },
+                function(selected) {
+                    let chosenPap = selected.raw;
+                    if (selected.paps && selected.paps.length > 1) {
+                        const ouMatch = selected.paps.find(p => p.operating_unit_ids && p.operating_unit_ids.includes(
+                            currentOuId));
+                        if (ouMatch) chosenPap = ouMatch;
+                    }
+                    hidden.value = chosenPap ? chosenPap.id : selected.id;
+                    syncAllHierarchies();
+                }
+            );
+
+            input.addEventListener('input', function() {
+                syncAllHierarchies();
+            });
+        }
+
+        // Activity Autocomplete in Activity Row
+        function initActivityAutocomplete(rowEl) {
+            const input = rowEl.querySelector('.activity-input');
+            const dropdown = rowEl.querySelector('.autocomplete-dropdown');
+
+            attachCombobox(
+                input,
+                dropdown,
+                function() {
+                    const parentProg = getPrecedingProgram(rowEl);
+                    let papsToSearch = [];
+                    if (parentProg && parentProg.id) {
+                        const p = bureauCatalog.find(item => String(item.id) === String(parentProg.id));
+                        if (p) papsToSearch = [p];
+                    } else if (parentProg && parentProg.name) {
+                        papsToSearch = bureauCatalog.filter(item => (item.category || item.name).toLowerCase() ===
+                            parentProg.name.toLowerCase());
+                    }
+
+                    if (papsToSearch.length > 0) {
+                        const acts = [];
+                        const seenAct = new Set();
+                        papsToSearch.forEach(p => {
+                            (p.activities || []).forEach(a => {
+                                if (!seenAct.has(a.name)) {
+                                    seenAct.add(a.name);
+                                    acts.push({
+                                        label: a.name,
+                                        sublabel: a.sub_program || '',
+                                        isRecommended: a.operating_unit_ids && a
+                                            .operating_unit_ids.includes(currentOuId),
+                                        parentPap: p,
+                                        raw: a
+                                    });
+                                }
+                            });
+                        });
+                        return acts;
+                    }
+
+                    const allActs = [];
+                    const seen = new Set();
+                    bureauCatalog.forEach(p => {
+                        (p.activities || []).forEach(a => {
+                            if (!seen.has(a.name)) {
+                                seen.add(a.name);
+                                allActs.push({
+                                    label: a.name,
+                                    sublabel: `${p.category || p.name}${a.sub_program ? ' · ' + a.sub_program : ''}`,
+                                    isRecommended: a.operating_unit_ids && a.operating_unit_ids
+                                        .includes(currentOuId),
+                                    parentPap: p,
+                                    raw: a
+                                });
+                            }
+                        });
+                    });
+                    return allActs;
+                },
+                function(selected) {
+                    input.value = selected.label;
+                    syncAllHierarchies();
+                }
+            );
+
+            input.addEventListener('input', function() {
+                syncAllHierarchies();
+            });
+        }
+
+        // Indicator Autocomplete in Indicator Row
+        function initIndicatorAutocomplete(idx) {
+            const indInput = document.getElementById(`indicator_search_${idx}`);
+            const indDropdown = document.getElementById(`indicator_dropdown_${idx}`);
+            const indIdHidden = document.getElementById(`indicator_id_${idx}`);
+            const indCodeHidden = document.getElementById(`indicator_code_${idx}`);
+            const unitInput = document.getElementById(`unit_${idx}`);
+
+            attachCombobox(
+                indInput,
+                indDropdown,
+                function() {
+                    const row = document.getElementById(`row_${idx}`);
+                    const parentProg = getPrecedingProgram(row);
+                    const parentAct = getPrecedingActivity(row);
+
+                    if (parentProg && parentProg.id && parentAct) {
+                        const pap = bureauCatalog.find(p => String(p.id) === String(parentProg.id));
+                        if (pap && pap.activities) {
+                            const act = pap.activities.find(a => a.name === parentAct);
+                            if (act && act.indicators && act.indicators.length > 0) {
+                                return act.indicators.map(i => ({
+                                    id: i.id,
+                                    label: i.name,
+                                    sublabel: `Unit: ${i.unit || 'Units'}`,
+                                    isRecommended: i.operating_unit_id === currentOuId,
+                                    raw: i
+                                }));
+                            }
+                        }
+                    }
+
+                    if (parentProg && parentProg.id) {
+                        const pap = bureauCatalog.find(p => String(p.id) === String(parentProg.id));
+                        if (pap && pap.activities) {
+                            const inds = [];
+                            pap.activities.forEach(a => {
+                                (a.indicators || []).forEach(i => {
+                                    inds.push({
+                                        id: i.id,
+                                        label: i.name,
+                                        sublabel: `${a.name} · Unit: ${i.unit || 'Units'}`,
+                                        isRecommended: i.operating_unit_id === currentOuId,
+                                        parentAct: a.name,
+                                        parentSubProg: a.sub_program,
+                                        raw: i
+                                    });
+                                });
+                            });
+                            return inds;
+                        }
+                    }
+
+                    const allInds = [];
+                    bureauCatalog.forEach(p => {
+                        (p.activities || []).forEach(a => {
+                            (a.indicators || []).forEach(i => {
+                                allInds.push({
+                                    id: i.id,
+                                    label: i.name,
+                                    sublabel: `${p.category || p.name} · ${a.name}`,
+                                    isRecommended: i.operating_unit_id === currentOuId,
+                                    parentPap: p,
+                                    parentAct: a.name,
+                                    parentSubProg: a.sub_program,
+                                    raw: i
+                                });
+                            });
+                        });
+                    });
+                    return allInds;
+                },
+                function(selected) {
+                    indIdHidden.value = selected.id;
+                    indCodeHidden.value = selected.raw.code || '';
+                    if (unitInput) unitInput.value = selected.raw.unit || 'number';
+
+                    const row = document.getElementById(`row_${idx}`);
+                    syncAllHierarchies();
+                }
+            );
+
+            indInput.addEventListener('input', function() {
+                indIdHidden.value = ''; // custom indicator
+            });
         }
 
         function recalcRow(idx) {
@@ -1119,15 +1360,15 @@
                 const variance = Math.round((total - annual) * 100) / 100;
                 if (annual > 0 && Math.abs(variance) < 0.01) {
                     balanceBadge.className =
-                        'text-[10px] font-black px-1.5 py-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-block w-full text-center';
+                        'text-[10px] font-black px-1.5 py-1.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-block w-full text-center';
                     balanceBadge.innerText = `✓ ${total.toFixed(0)} / ${annual.toFixed(0)}`;
                 } else if (annual === 0) {
                     balanceBadge.className =
-                        'text-[10px] font-black px-1.5 py-1 rounded bg-slate-100 text-slate-500 inline-block w-full text-center';
+                        'text-[10px] font-black px-1.5 py-1.5 rounded bg-slate-100 text-slate-500 inline-block w-full text-center border border-slate-200';
                     balanceBadge.innerText = `0 / 0`;
                 } else {
                     balanceBadge.className =
-                        'text-[10px] font-black px-1.5 py-1 rounded bg-amber-100 text-amber-900 border border-amber-300 inline-block w-full text-center';
+                        'text-[10px] font-black px-1.5 py-1.5 rounded bg-amber-100 text-amber-900 border border-amber-300 inline-block w-full text-center';
                     balanceBadge.innerText =
                         `⚠️ ${total.toFixed(0)} / ${annual.toFixed(0)} (${variance > 0 ? '+' : ''}${variance.toFixed(0)})`;
                 }
@@ -1171,7 +1412,7 @@
             recalcRow(idx);
         }
 
-        function removeRow(idx) {
+        function removeSpreadsheetRow(idx) {
             const row = document.getElementById(`row_${idx}`);
             if (!row) return;
 
@@ -1193,6 +1434,7 @@
                     .then(data => {
                         if (data.success) {
                             row.remove();
+                            syncAllHierarchies();
                             updateSummaryCounters();
                         } else {
                             alert(data.error || 'Failed to delete row.');
@@ -1203,15 +1445,8 @@
                     });
             } else {
                 row.remove();
+                syncAllHierarchies();
                 updateSummaryCounters();
-            }
-        }
-
-        function removeHeaderRow(btn, typeName) {
-            const tr = btn.closest('tr');
-            if (!tr) return;
-            if (confirm(`Remove this ${typeName} header row?`)) {
-                tr.remove();
             }
         }
 
@@ -1225,840 +1460,17 @@
             });
 
             const summaryEl = document.getElementById('matrixSummaryBadge');
-            const bottomEl = document.getElementById('encodedCountDisplay');
-            if (summaryEl) summaryEl.innerText = `${configuredCount} Active Commitments`;
-            if (bottomEl) bottomEl.innerText = configuredCount;
+            if (summaryEl) summaryEl.innerText = `${rows.length} Commitments (${configuredCount} with Targets)`;
         }
 
-        function openNewCategoryPapModal(defaultCategory = '') {
-            if (defaultCategory) {
-                document.getElementById('modalCategoryInput').value = defaultCategory;
-            }
-            document.getElementById('newCategoryPapModal').classList.remove('hidden');
-            setTimeout(() => {
-                const searchInp = document.getElementById('modalPapSearchInput');
-                if (searchInp) {
-                    searchInp.value = '';
-                    filterPapSelect('');
-                    searchInp.focus();
-                }
-            }, 60);
-        }
-
-        function closeNewCategoryPapModal() {
-            document.getElementById('newCategoryPapModal').classList.add('hidden');
-        }
-
-        let papKeystrokeBuffer = '';
-        let papKeystrokeTimer = null;
-
-        function initPapKeystrokeLock() {
-            const select = document.getElementById('modalPapSelect');
-            if (!select) return;
-
-            // Direct keydown on select element
-            select.addEventListener('keydown', function(e) {
-                if (['Tab', 'Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-                if (e.altKey || e.ctrlKey || e.metaKey) return;
-
-                if (e.key === 'Backspace') {
-                    papKeystrokeBuffer = papKeystrokeBuffer.slice(0, -1);
-                    lockSelectToMatch(select, papKeystrokeBuffer);
-                    return;
-                }
-
-                if (e.key.length !== 1) return;
-
-                e.preventDefault();
-                clearTimeout(papKeystrokeTimer);
-                papKeystrokeBuffer += e.key.toLowerCase();
-                papKeystrokeTimer = setTimeout(() => { papKeystrokeBuffer = ''; }, 1200);
-
-                lockSelectToMatch(select, papKeystrokeBuffer);
-            });
-
-            // If modal is open and user presses keys anywhere not in another form input, redirect to lock
-            document.addEventListener('keydown', function(e) {
-                const modal = document.getElementById('newCategoryPapModal');
-                if (!modal || modal.classList.contains('hidden')) return;
-
-                if (e.key === 'Escape') {
-                    closeNewCategoryPapModal();
-                    return;
-                }
-
-                const active = document.activeElement;
-                const searchInput = document.getElementById('modalPapSearchInput');
-                const isOtherFormInput = active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) && active !== searchInput && active !== select;
-
-                if (!isOtherFormInput && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                    if (searchInput && active !== searchInput && active !== select) {
-                        searchInput.focus();
-                    }
-                }
-            });
-        }
-
-        function lockSelectToMatch(select, query) {
-            if (!query) return;
-            const cleanQuery = query.trim().toLowerCase();
-            if (!cleanQuery) return;
-
-            const options = Array.from(select.options);
-
-            const match = options.find(opt => {
-                if (!opt.value || opt.value === 'new') return false;
-                const name = (opt.getAttribute('data-name') || '').toLowerCase();
-                return name.startsWith(cleanQuery);
-            }) || options.find(opt => {
-                if (!opt.value || opt.value === 'new') return false;
-                const code = (opt.getAttribute('data-code') || '').toLowerCase();
-                return code.startsWith(cleanQuery) || code.replace(/[^a-z0-9]/g, '').startsWith(cleanQuery.replace(/[^a-z0-9]/g, ''));
-            }) || options.find(opt => {
-                if (!opt.value || opt.value === 'new') return false;
-                const name = (opt.getAttribute('data-name') || '').toLowerCase();
-                const words = name.split(/[\s\-_\/]+/);
-                return words.some(w => w.startsWith(cleanQuery));
-            }) || options.find(opt => {
-                if (!opt.value || opt.value === 'new') return false;
-                const name = (opt.getAttribute('data-name') || '').toLowerCase();
-                return name.includes(cleanQuery);
-            }) || options.find(opt => {
-                if (!opt.value || opt.value === 'new') return false;
-                const code = (opt.getAttribute('data-code') || '').toLowerCase();
-                return code.includes(cleanQuery);
-            }) || options.find(opt => {
-                if (!opt.value || opt.value === 'new') return false;
-                return opt.textContent.toLowerCase().includes(cleanQuery);
-            });
-
-            if (match) {
-                select.value = match.value;
-                onPapSelectChange(select);
-            }
-        }
-
-        function filterPapSelect(val) {
-            const select = document.getElementById('modalPapSelect');
-            if (!select) return;
-
-            const query = val.trim().toLowerCase();
-            const options = Array.from(select.options);
-
-            if (!query) {
-                options.forEach(opt => { opt.hidden = false; });
-                return;
-            }
-
-            options.forEach(opt => {
-                if (!opt.value || opt.value === 'new') {
-                    opt.hidden = false;
-                    return;
-                }
-
-                const name = (opt.getAttribute('data-name') || '').toLowerCase();
-                const code = (opt.getAttribute('data-code') || '').toLowerCase();
-                const text = opt.textContent.toLowerCase();
-
-                const isMatch = name.includes(query) || code.includes(query) || text.includes(query);
-                opt.hidden = !isMatch;
-            });
-
-            lockSelectToMatch(select, query);
-        }
-
-        function handlePapSearchKeydown(e) {
-            const select = document.getElementById('modalPapSelect');
-            if (!select) return;
-
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (select.value) {
-                    const nextInput = document.getElementById('modalSubProgram');
-                    if (nextInput) nextInput.focus();
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                select.focus();
-            }
-        }
-
-        function openAddSubProgramModal(papId, papCode, papName) {
-            document.getElementById('spModalPapId').value = papId;
-            document.getElementById('spModalPapCode').value = papCode;
-            document.getElementById('spModalPapName').value = papName;
-            document.getElementById('spModalTitle').value = '';
-            document.getElementById('addSubProgramModal').classList.remove('hidden');
-            document.getElementById('spModalTitle').focus();
-        }
-
-        function closeAddSubProgramModal() {
-            document.getElementById('addSubProgramModal').classList.add('hidden');
-        }
-
-        function submitSubProgramOnly(event) {
-            event.preventDefault();
-            const papId = document.getElementById('spModalPapId').value;
-            const papCode = document.getElementById('spModalPapCode').value;
-            const papName = document.getElementById('spModalPapName').value;
-            const title = document.getElementById('spModalTitle').value.trim();
-
-            ensureSubProgramRow(papId, papCode, papName, title);
-            closeAddSubProgramModal();
-        }
-
-        function openAddActivityModal(papId, papCode, papName, subProgram = '') {
-            document.getElementById('actModalPapId').value = papId;
-            document.getElementById('actModalPapCode').value = papCode;
-            document.getElementById('actModalPapName').value = papName;
-            document.getElementById('actModalSubProgram').value = subProgram;
-            document.getElementById('actModalTitle').value = '';
-            document.getElementById('addActivityModal').classList.remove('hidden');
-            document.getElementById('actModalTitle').focus();
-        }
-
-        function closeAddActivityModal() {
-            document.getElementById('addActivityModal').classList.add('hidden');
-        }
-
-        function submitActivityOnly(event) {
-            event.preventDefault();
-            const papId = document.getElementById('actModalPapId').value;
-            const papCode = document.getElementById('actModalPapCode').value;
-            const papName = document.getElementById('actModalPapName').value;
-            const subProgram = document.getElementById('actModalSubProgram').value;
-            const title = document.getElementById('actModalTitle').value.trim();
-
-            if (subProgram) {
-                ensureSubProgramRow(papId, papCode, papName, subProgram);
-            }
-            ensureActivityRow(papId, papCode, papName, subProgram, title);
-            closeAddActivityModal();
-        }
-
-        function submitNewStructure(event) {
-            event.preventDefault();
-            const btn = document.getElementById('btnSubmitModal');
-            btn.disabled = true;
-            btn.innerText = 'Inserting...';
-
-            const sel = document.getElementById('modalPapSelect');
-            const isNew = sel.value === 'new';
-            const includeIndicator = document.getElementById('modalIncludeIndicatorChk').checked;
-
-            let papId = isNew ? null : sel.value;
-            let papCode = isNew ? document.getElementById('modalPapCode').value.trim() : sel.options[sel.selectedIndex]
-                .getAttribute('data-code');
-            let papName = isNew ? document.getElementById('modalPapName').value.trim() : sel.options[sel.selectedIndex]
-                .getAttribute('data-name');
-            let category = isNew ? document.getElementById('modalCategoryInput').value.trim() : sel.options[sel
-                .selectedIndex].getAttribute('data-category');
-
-            const subProgram = document.getElementById('modalSubProgram').value.trim();
-            const activity = document.getElementById('modalActivity').value.trim();
-            const subActivity = document.getElementById('modalSubActivity').value.trim();
-            const indicatorName = document.getElementById('modalIndicatorName').value.trim();
-            const indicatorUnit = document.getElementById('modalIndicatorUnit').value.trim();
-            const annualTarget = parseFloat(document.getElementById('modalAnnualTarget').value) || 0;
-
-            if (isNew) {
-                fetch("{{ route('paps.quick-store') }}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            category: category,
-                            code: papCode,
-                            name: papName,
-                            indicator_name: includeIndicator ? indicatorName : null,
-                            indicator_unit: indicatorUnit,
-                            indicator_type: 'output'
-                        })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        btn.disabled = false;
-                        btn.innerText = 'Insert into Sheet';
-
-                        if (data.success) {
-                            ensureCategoryRow(category);
-                            ensurePapRow(data.pap.id, data.pap.code, data.pap.name);
-                            if (subProgram) ensureSubProgramRow(data.pap.id, data.pap.code, data.pap.name, subProgram);
-                            if (activity) ensureActivityRow(data.pap.id, data.pap.code, data.pap.name, subProgram,
-                                activity);
-
-                            if (includeIndicator) {
-                                insertDynamicRow({
-                                    papId: data.pap.id,
-                                    papCode: data.pap.code,
-                                    papName: data.pap.name,
-                                    category: category,
-                                    subProgram: subProgram,
-                                    activity: activity,
-                                    subActivity: subActivity,
-                                    indicatorId: data.indicator ? data.indicator.id : null,
-                                    indicatorCode: data.indicator ? data.indicator.code : (papCode + '-IND-01'),
-                                    indicatorName: indicatorName,
-                                    indicatorUnit: indicatorUnit,
-                                    indicatorType: 'output',
-                                    annualTarget: annualTarget
-                                });
-                            }
-
-                            closeNewCategoryPapModal();
-                            document.getElementById('quickStructureForm').reset();
-                        } else {
-                            alert(data.message || 'Error creating PAP.');
-                        }
-                    })
-                    .catch(err => {
-                        btn.disabled = false;
-                        btn.innerText = 'Insert into Sheet';
-                        alert('Network error: ' + err.message);
-                    });
-            } else {
-                btn.disabled = false;
-                btn.innerText = 'Insert into Sheet';
-
-                ensureCategoryRow(category);
-                ensurePapRow(papId, papCode, papName);
-                if (subProgram) ensureSubProgramRow(papId, papCode, papName, subProgram);
-                if (activity) ensureActivityRow(papId, papCode, papName, subProgram, activity);
-
-                if (includeIndicator) {
-                    insertDynamicRow({
-                        papId: papId,
-                        papCode: papCode,
-                        papName: papName,
-                        category: category,
-                        subProgram: subProgram,
-                        activity: activity,
-                        subActivity: subActivity,
-                        indicatorId: null,
-                        indicatorCode: papCode + '-IND-NEW',
-                        indicatorName: indicatorName || '',
-                        indicatorUnit: indicatorUnit || 'Units',
-                        indicatorType: 'output',
-                        annualTarget: annualTarget
-                    });
-                }
-
-                closeNewCategoryPapModal();
-                document.getElementById('quickStructureForm').reset();
-            }
-        }
-
-        function ensureCategoryRow(category) {
-            const tbody = document.getElementById('sheetTbody');
-            const emptyPrompt = document.getElementById('emptySheetPromptRow');
-            if (emptyPrompt) emptyPrompt.remove();
-
-            const catUpper = (category || 'OPERATIONS').toUpperCase().trim();
-            let catRow = tbody.querySelector(`.category-banner-row[data-category="${catUpper}"]`);
-            if (!catRow) {
-                const catHtml = `
-                    <tr class="category-banner-row bg-slate-100/90 text-slate-800 font-extrabold text-xs uppercase tracking-wider border-y border-slate-200 select-none"
-                        data-category="${catUpper}">
-                        <!-- Col 1: Category Title -->
-                        <td class="p-2.5 px-4 border-r border-slate-200 border-l-4 border-l-emerald-600 bg-slate-100/90 text-slate-900 font-extrabold text-xs uppercase tracking-wider">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                                <span>${catUpper}</span>
-                            </div>
-                        </td>
-                        <!-- Col 2: Action Button -->
-                        <td class="p-2 border-r border-slate-200 bg-slate-100/90">
-                            <button type="button" onclick="openNewCategoryPapModal('${catUpper}')"
-                                class="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-800 font-bold shadow-sm transition flex items-center gap-1">
-                                <span class="text-emerald-600 font-extrabold">+</span>
-                                <span>Add Program under ${catUpper}</span>
-                            </button>
-                        </td>
-                        <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="border-r border-slate-200/80 bg-slate-100/70"></td>
-                        <td class="bg-slate-100/70"></td>
-                    </tr>
-                `;
-                tbody.insertAdjacentHTML('beforeend', catHtml);
-            }
-        }
-
-        function ensurePapRow(papId, papCode, papName) {
-            const tbody = document.getElementById('sheetTbody');
-            const emptyPrompt = document.getElementById('emptySheetPromptRow');
-            if (emptyPrompt) emptyPrompt.remove();
-
-            let papRow = tbody.querySelector(`.pap-banner-row[data-pap-id="${papId}"]`);
-            if (!papRow) {
-                const papHtml = `
-                    <tr class="pap-banner-row bg-emerald-50/90 text-emerald-950 font-extrabold text-xs uppercase tracking-wide border-t border-b border-emerald-200 select-none"
-                        data-pap-id="${papId}" data-pap-code="${papCode}" data-pap-name="${papName}">
-                        <!-- Col 1: PAP Badge & Name -->
-                        <td class="p-2 px-3 border-r border-emerald-200 bg-emerald-50/90 text-emerald-950 font-extrabold text-xs uppercase tracking-wide">
-                            <div class="flex items-start gap-2">
-                                <span class="font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 font-black text-[11px] shrink-0 mt-0.5">
-                                    ${papCode}
-                                </span>
-                                <span class="font-extrabold text-emerald-950 text-xs leading-snug whitespace-normal break-words" title="${papName}">${papName}</span>
-                            </div>
-                        </td>
-                        <!-- Col 2: Action Buttons -->
-                        <td class="p-2 border-r border-emerald-200 bg-emerald-50/90">
-                            <div class="flex items-center gap-1.5">
-                                <button type="button" onclick="addRowUnderPap(${papId}, '${papCode}', '${papName}')"
-                                    class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] transition flex items-center gap-1 shadow-sm">
-                                    + Add Indicator Row
-                                </button>
-                                <button type="button" onclick="openAddSubProgramModal(${papId}, '${papCode}', '${papName}')"
-                                    class="px-2 py-0.5 rounded bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-extrabold text-[10px] transition">
-                                    + Sub-Program
-                                </button>
-                                <button type="button" onclick="openAddActivityModal(${papId}, '${papCode}', '${papName}')"
-                                    class="px-2 py-0.5 rounded bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-extrabold text-[10px] transition">
-                                    + Activity
-                                </button>
-                            </div>
-                        </td>
-                        <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                        <td class="border-r border-emerald-200 bg-emerald-50/50"></td>
-                        <td class="border-r border-emerald-300 bg-amber-50/30"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-100 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-200 bg-emerald-50/30"></td>
-                        <td class="border-r border-emerald-300 bg-emerald-100/60"></td>
-                        <td class="border-r border-emerald-200 bg-emerald-50/50"></td>
-                        <td class="bg-emerald-50/50"></td>
-                    </tr>
-                `;
-                tbody.insertAdjacentHTML('beforeend', papHtml);
-            }
-        }
-
-        function ensureSubProgramRow(papId, papCode, papName, subProgram) {
-            const tbody = document.getElementById('sheetTbody');
-            let spRow = tbody.querySelector(`.subprogram-row[data-pap-id="${papId}"][data-subprogram="${subProgram}"]`);
-            if (!spRow) {
-                const spHtml = `
-                    <tr class="subprogram-row bg-slate-100 font-black text-slate-800 text-[11px] border-b border-slate-200"
-                        data-pap-id="${papId}" data-subprogram="${subProgram}">
-                        <!-- Col 1: Sub-Program Title -->
-                        <td class="py-2 px-3 border-r border-slate-200 bg-slate-100">
-                            <span class="italic font-bold text-slate-800 whitespace-normal break-words leading-snug block" title="${subProgram}">${subProgram}</span>
-                        </td>
-                        <!-- Col 2: Action Button -->
-                        <td class="py-2 px-2 border-r border-slate-200 bg-slate-100">
-                            <div class="flex items-center justify-between gap-1">
-                                <div class="flex items-center gap-1.5">
-                                    <button type="button" onclick="addRowUnderPap(${papId}, '${papCode}', '${papName}', '${subProgram}')"
-                                        class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] transition flex items-center gap-1 shadow-sm">
-                                        + Add Indicator Row
-                                    </button>
-                                    <button type="button" onclick="openAddActivityModal(${papId}, '${papCode}', '${papName}', '${subProgram}')"
-                                        class="text-[9px] font-bold text-slate-600 hover:text-emerald-700 px-2 py-0.5 rounded hover:bg-slate-200 transition">
-                                        + Activity
-                                    </button>
-                                </div>
-                                <button type="button" onclick="removeHeaderRow(this, 'Sub-Program')"
-                                    class="text-slate-400 hover:text-rose-600 font-bold text-sm px-1 leading-none" title="Remove Sub-Program Header">&times;</button>
-                            </div>
-                        </td>
-                        <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                        <td class="border-r border-slate-200 bg-slate-50"></td>
-                        <td class="border-r border-slate-300 bg-amber-50/20"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-100 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-200 bg-slate-50/50"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-200 bg-slate-50"></td>
-                        <td class="bg-slate-50"></td>
-                    </tr>
-                `;
-                // Insert after papRow or at end
-                let papRow = tbody.querySelector(`.pap-banner-row[data-pap-id="${papId}"]`);
-                if (papRow) {
-                    papRow.insertAdjacentHTML('afterend', spHtml);
-                } else {
-                    tbody.insertAdjacentHTML('beforeend', spHtml);
-                }
-            }
-        }
-
-        function ensureActivityRow(papId, papCode, papName, subProgram, activity) {
-            const tbody = document.getElementById('sheetTbody');
-            let actRow = tbody.querySelector(`.activity-row[data-pap-id="${papId}"][data-activity="${activity}"]`);
-            if (!actRow) {
-                const actHtml = `
-                    <tr class="activity-row bg-slate-50 font-extrabold text-slate-700 text-[11px] border-b border-slate-200"
-                        data-pap-id="${papId}" data-subprogram="${subProgram || ''}" data-activity="${activity}">
-                        <!-- Col 1: Activity Title -->
-                        <td class="py-2 px-5 border-r border-slate-200 bg-slate-50">
-                            <span class="font-extrabold text-emerald-950 whitespace-normal break-words leading-snug block" title="${activity}">&bull; ${activity}</span>
-                        </td>
-                        <!-- Col 2: Action Button -->
-                        <td class="py-2 px-2 border-r border-slate-200 bg-slate-50">
-                            <div class="flex items-center justify-between gap-1">
-                                <button type="button" onclick="addRowUnderPap(${papId}, '${papCode}', '${papName}', '${subProgram || ''}', '${activity}')"
-                                    class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] transition flex items-center gap-1 shadow-sm">
-                                    + Add Indicator Row
-                                </button>
-                                <button type="button" onclick="removeHeaderRow(this, 'Activity')"
-                                    class="text-slate-400 hover:text-rose-600 font-bold text-sm px-1 leading-none" title="Remove Activity Header">&times;</button>
-                            </div>
-                        </td>
-                        <!-- Cols 3-22: Shaded Grid Cells with Vertical Borders -->
-                        <td class="border-r border-slate-200 bg-white"></td>
-                        <td class="border-r border-slate-300 bg-amber-50/20"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-200 bg-white"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-200 bg-white"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-200 bg-white"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-100 bg-white"></td>
-                        <td class="border-r border-slate-200 bg-white"></td>
-                        <td class="border-r border-slate-300 bg-slate-100"></td>
-                        <td class="border-r border-slate-200 bg-white"></td>
-                        <td class="bg-white"></td>
-                    </tr>
-                `;
-                // Place after subprogram if exists, else after papRow
-                let spRow = subProgram ? tbody.querySelector(
-                    `.subprogram-row[data-pap-id="${papId}"][data-subprogram="${subProgram}"]`) : null;
-                if (spRow) {
-                    spRow.insertAdjacentHTML('afterend', actHtml);
-                } else {
-                    let papRow = tbody.querySelector(`.pap-banner-row[data-pap-id="${papId}"]`);
-                    if (papRow) papRow.insertAdjacentHTML('afterend', actHtml);
-                    else tbody.insertAdjacentHTML('beforeend', actHtml);
-                }
-            }
-        }
-
-        function addRowUnderPap(papId, papCode, papName, defaultSubProgram = '', defaultActivity = '') {
-            insertDynamicRow({
-                papId: papId,
-                papCode: papCode,
-                papName: papName,
-                category: '',
-                subProgram: defaultSubProgram,
-                activity: defaultActivity,
-                subActivity: '',
-                indicatorId: null,
-                indicatorCode: papCode + '-IND-NEW',
-                indicatorName: '',
-                indicatorUnit: 'Units',
-                indicatorType: 'output',
-                annualTarget: 0
-            });
-        }
-
-        function insertDynamicRow(data) {
-            const tbody = document.getElementById('sheetTbody');
-            const emptyPrompt = document.getElementById('emptySheetPromptRow');
-            if (emptyPrompt) emptyPrompt.remove();
-
-            const idx = totalRows++;
-
-            // Ensure structural rows exist
-            if (data.category) ensureCategoryRow(data.category);
-            ensurePapRow(data.papId, data.papCode, data.papName);
-            if (data.subProgram) ensureSubProgramRow(data.papId, data.papCode, data.papName, data.subProgram);
-            if (data.activity) ensureActivityRow(data.papId, data.papCode, data.papName, data.subProgram, data.activity);
-
-            // Compute default process step number if possible
-            let stepPrefix = '';
-            if (!data.subActivity) {
-                const existingInAct = tbody.querySelectorAll(
-                    `.data-row[data-pap-id="${data.papId}"][data-activity="${data.activity || ''}"]`);
-                stepPrefix = (existingInAct.length + 1) + '. ';
-            }
-
-            const newRowHtml = `
-                <tr class="data-row hover:bg-slate-50/80 transition" id="row_${idx}" data-index="${idx}"
-                    data-pap-id="${data.papId}" data-subprogram="${data.subProgram || ''}" data-activity="${data.activity || ''}">
-                    <input type="hidden" name="plans[${idx}][pap_id]" value="${data.papId}">
-                    <input type="hidden" name="plans[${idx}][performance_indicator_id]" value="${data.indicatorId || ''}">
-                    <input type="hidden" name="plans[${idx}][sub_program]" value="${data.subProgram || ''}">
-                    <input type="hidden" name="plans[${idx}][activity]" value="${data.activity || ''}">
-
-                    <!-- Col 1: Specific Activity / Breakdown -->
-                    <td class="p-0 border-r border-slate-200 align-top min-w-[340px] max-w-[440px] w-[380px]">
-                        <input type="hidden" name="plans[${idx}][indicator_code]" value="${data.indicatorCode || ''}">
-                        <textarea name="plans[${idx}][sub_activity]"
-                            placeholder="1. Specific activity or task breakdown..."
-                            oninput="autoResizeTextarea(this)"
-                            class="auto-expand-textarea w-full p-2.5 text-xs font-semibold text-slate-800 bg-transparent border-0 rounded-none focus:outline-none focus:ring-0 leading-relaxed block">${data.subActivity ? data.subActivity : stepPrefix}</textarea>
-                    </td>
-
-                    <!-- Col 2: Key Indicator (KPI) -->
-                    <td class="p-0 border-r border-slate-200 align-top min-w-[320px] max-w-[420px] w-[360px]">
-                        <textarea name="plans[${idx}][indicator_name]"
-                            placeholder="Key Performance Indicator target text..."
-                            oninput="autoResizeTextarea(this)"
-                            class="auto-expand-textarea w-full p-2.5 text-xs font-semibold text-slate-800 bg-transparent border-0 rounded-none focus:outline-none focus:ring-0 leading-relaxed block">${data.indicatorName || ''}</textarea>
-                    </td>
-
-                    <!-- Col 3: Unit -->
-                    <td class="p-2 border-r border-slate-200 align-middle text-center bg-white min-w-[70px] w-[70px]">
-                        <input type="text" name="plans[${idx}][unit_of_measure]" value="${data.indicatorUnit || 'Units'}"
-                            class="w-16 px-1.5 py-1 text-center font-bold text-slate-700 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:bg-white focus:ring-1 focus:ring-emerald-500">
-                    </td>
-
-                    <!-- Col 4: Annual Target -->
-                    <td class="p-2 border-r border-slate-300 align-middle bg-amber-50/40 text-center min-w-[100px] w-[100px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][annual_target]"
-                            id="annual_${idx}" value="${data.annualTarget || 0}" required
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-24 min-w-[90px] px-2 py-1 text-right font-mono font-black text-slate-900 border border-amber-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-emerald-500 shadow-sm">
-                    </td>
-
-                    <!-- Q1 Months -->
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m1_target]" id="m1_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m2_target]" id="m2_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m3_target]" id="m3_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                        <span id="q1_badge_${idx}" class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                    </td>
-
-                    <!-- Q2 Months -->
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m4_target]" id="m4_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m5_target]" id="m5_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m6_target]" id="m6_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                        <span id="q2_badge_${idx}" class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                    </td>
-
-                    <!-- Q3 Months -->
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m7_target]" id="m7_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m8_target]" id="m8_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m9_target]" id="m9_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                        <span id="q3_badge_${idx}" class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                    </td>
-
-                    <!-- Q4 Months -->
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m10_target]" id="m10_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-100 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m11_target]" id="m11_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[68px] w-[68px]">
-                        <input type="number" step="0.01" min="0" name="plans[${idx}][m12_target]" id="m12_${idx}" value="0"
-                            oninput="recalcRow(${idx})"
-                            class="sheet-number-input w-[60px] min-w-[60px] px-1 py-1 text-center font-mono font-bold border border-slate-200 rounded text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-1 border-r border-slate-300 text-center align-middle bg-slate-100 min-w-[74px] w-[74px]">
-                        <span id="q4_badge_${idx}" class="w-[66px] min-w-[66px] py-1 font-mono font-extrabold text-xs text-slate-900 inline-block bg-slate-200 rounded text-center px-1">0.00</span>
-                    </td>
-
-                    <!-- Balance Status -->
-                    <td class="p-1 border-r border-slate-200 text-center align-middle bg-white min-w-[105px] w-[105px]">
-                        <span id="balance_badge_${idx}" class="text-[10px] font-black px-1.5 py-1 rounded bg-slate-100 text-slate-600 inline-block w-full text-center">
-                            0 / 0
-                        </span>
-                    </td>
-
-                    <!-- Presets & Actions -->
-                    <td class="p-1 text-center align-middle bg-white min-w-[120px] w-[120px]">
-                        <div class="flex items-center justify-center gap-1">
-                                <button type="button" onclick="distributeEvenly(${idx})"
-                                    class="px-1.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded border border-emerald-200" title="Distribute Evenly">
-                                    ⚡Even
-                                </button>
-                                <button type="button" onclick="distributeQuarterly(${idx})"
-                                    class="px-1.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-extrabold text-[10px] rounded border border-indigo-200" title="Distribute Quarterly">
-                                    ⚡Qtr
-                                </button>
-                                <button type="button" onclick="removeRow(${idx})"
-                                    class="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 rounded border border-rose-200 transition" title="Remove this row">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-
-            // Insert in correct position under the PAP hierarchy
-            if (data.activity) {
-                const existingRowsInActivity = tbody.querySelectorAll(
-                    `.data-row[data-pap-id="${data.papId}"][data-activity="${data.activity}"]`);
-                if (existingRowsInActivity.length > 0) {
-                    existingRowsInActivity[existingRowsInActivity.length - 1].insertAdjacentHTML('afterend', newRowHtml);
-                } else {
-                    const actRow = tbody.querySelector(
-                        `.activity-row[data-pap-id="${data.papId}"][data-activity="${data.activity}"]`);
-                    if (actRow) {
-                        actRow.insertAdjacentHTML('afterend', newRowHtml);
-                    } else {
-                        tbody.insertAdjacentHTML('beforeend', newRowHtml);
-                    }
-                }
-            } else if (data.subProgram) {
-                const existingInSub = tbody.querySelectorAll(
-                    `.data-row[data-pap-id="${data.papId}"][data-subprogram="${data.subProgram}"]`);
-                if (existingInSub.length > 0) {
-                    existingInSub[existingInSub.length - 1].insertAdjacentHTML('afterend', newRowHtml);
-                } else {
-                    const spRow = tbody.querySelector(
-                        `.subprogram-row[data-pap-id="${data.papId}"][data-subprogram="${data.subProgram}"]`);
-                    if (spRow) {
-                        spRow.insertAdjacentHTML('afterend', newRowHtml);
-                    } else {
-                        tbody.insertAdjacentHTML('beforeend', newRowHtml);
-                    }
-                }
-            } else {
-                // Direct child row under the PAP banner
-                const existingDirectPapRows = tbody.querySelectorAll(
-                    `.data-row[data-pap-id="${data.papId}"][data-subprogram=""][data-activity=""]`);
-                if (existingDirectPapRows.length > 0) {
-                    existingDirectPapRows[existingDirectPapRows.length - 1].insertAdjacentHTML('afterend', newRowHtml);
-                } else {
-                    const papRow = tbody.querySelector(`.pap-banner-row[data-pap-id="${data.papId}"]`);
-                    if (papRow) {
-                        papRow.insertAdjacentHTML('afterend', newRowHtml);
-                    } else {
-                        tbody.insertAdjacentHTML('beforeend', newRowHtml);
-                    }
-                }
-            }
-
-            recalcRow(idx);
-            updateSummaryCounters();
-
-            const newRow = document.getElementById(`row_${idx}`);
-            if (newRow) {
-                newRow.querySelectorAll('.auto-expand-textarea').forEach(autoResizeTextarea);
-                newRow.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }
-        }
-
-        function autoResizeTextarea(el) {
-            if (!el) return;
-            // Reset height first so scrollHeight accurately reflects full content
-            el.style.height = 'auto';
-            // In Chromium box-sizing: border-box, scrollHeight omits bottom padding.
-            // Add a generous safety buffer (+18px) so descenders and the bottom line are never clipped.
-            const targetHeight = Math.max(54, el.scrollHeight + 18);
-            el.style.height = targetHeight + 'px';
-        }
-
-        function initAutoResizeTextareas() {
-            document.querySelectorAll('.auto-expand-textarea').forEach(function(el) {
-                autoResizeTextarea(el);
-            });
-        }
-
-        function initPage() {
-            initAutoResizeTextareas();
-            initPapKeystrokeLock();
-        }
-
-        window.addEventListener('DOMContentLoaded', initPage);
-        window.addEventListener('load', initAutoResizeTextareas);
-        window.addEventListener('resize', initAutoResizeTextareas);
-        setTimeout(initAutoResizeTextareas, 50);
-        setTimeout(initAutoResizeTextareas, 200);
-        setTimeout(initAutoResizeTextareas, 600);
-
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(initAutoResizeTextareas);
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
     </script>
 @endsection

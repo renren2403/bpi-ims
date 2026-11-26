@@ -10,6 +10,7 @@ class PerformanceIndicator extends Model
     use HasFactory;
     protected $fillable = [
         'pap_id',
+        'operating_unit_id',
         'sub_program',
         'activity',
         'sub_activity',
@@ -25,6 +26,11 @@ class PerformanceIndicator extends Model
     public function pap()
     {
         return $this->belongsTo(PAP::class, 'pap_id');
+    }
+
+    public function operatingUnit()
+    {
+        return $this->belongsTo(OperatingUnit::class, 'operating_unit_id');
     }
 
     public function bed2Plans()

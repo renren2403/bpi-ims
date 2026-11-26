@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             OperatingUnitSeeder::class,
             PAPSeeder::class,
+            BpiProgramCatalogSeeder::class,
             UserSeeder::class,
         ]);
     }

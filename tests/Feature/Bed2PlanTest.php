@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
 use App\Models\Bed2Plan;
 use App\Models\OperatingUnit;
 use App\Models\PAP;
@@ -586,5 +585,60 @@ class Bed2PlanTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseMissing('bed2_plans', ['id' => $plan1->id]);
         $this->assertDatabaseMissing('bed2_plans', ['id' => $plan2->id]);
+    }
+
+    public function test_encoder_can_encode_plan_from_clean_slate_with_free_text_program_name(): void
+    {
+        $unit = OperatingUnit::factory()->create();
+        $encoder = $this->createUserWithRole('encoder', ['operating_unit_id' => $unit->id]);
+
+        $postData = [
+            'year' => (int) date('Y'),
+            'plans' => [
+                [
+                    'program_name' => 'Custom Seed Certification Program',
+                    'activity' => 'Field Inspection and Seed Testing',
+                    'sub_program' => 'Quality Assurance',
+                    'sub_activity' => 'Purity and germination lab testing',
+                    'indicator_name' => 'Number of seed lots tested and certified',
+                    'unit_of_measure' => 'seed lots',
+                    'annual_target' => 120,
+                    'm1_target' => 10,
+                    'm2_target' => 10,
+                    'm3_target' => 10,
+                    'm4_target' => 10,
+                    'm5_target' => 10,
+                    'm6_target' => 10,
+                    'm7_target' => 10,
+                    'm8_target' => 10,
+                    'm9_target' => 10,
+                    'm10_target' => 10,
+                    'm11_target' => 10,
+                    'm12_target' => 10,
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($encoder)->post(route('bed2-plans.store'), $postData);
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('paps', [
+            'name' => 'Custom Seed Certification Program',
+        ]);
+        $this->assertDatabaseHas('performance_indicators', [
+            'name' => 'Number of seed lots tested and certified',
+            'activity' => 'Field Inspection and Seed Testing',
+            'sub_program' => 'Quality Assurance',
+            'sub_activity' => 'Purity and germination lab testing',
+        ]);
+        $this->assertDatabaseHas('bed2_plans', [
+            'operating_unit_id' => $unit->id,
+            'annual_target' => 120,
+            'q1_target' => 30,
+            'q2_target' => 30,
+            'q3_target' => 30,
+            'q4_target' => 30,
+            'status' => 'draft',
+        ]);
     }
 }
